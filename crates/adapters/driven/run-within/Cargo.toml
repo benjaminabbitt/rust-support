@@ -1,0 +1,33 @@
+[package]
+name = "run-within"
+version = "0.1.0"
+description = "Run a program under a deadline: its whole process tree killed when the deadline passes, its output kept bounded per stream, and the wait for that output bounded too, so a descendant that outlives the program cannot hang the caller; or a long-lived program on live pipes, with no deadline, its tree ended through a shared handle."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+angzarr-diagnostic.workspace = true
+os.workspace = true
+# Only `install_script`, which is test support.
+file-system = { workspace = true, optional = true }
+
+[dev-dependencies]
+file-system = { workspace = true, features = ["test-support"] }
+mutants.workspace = true
+os = { workspace = true, features = ["test-support"] }
+
+[build-dependencies]
+# The build writes the catalog's source under the crate's name
+# (angzarr_diagnostic::build): no catalog spells its crate's name.
+angzarr-diagnostic = { workspace = true, features = ["build"] }
+
+[lints]
+workspace = true
+
+[features]
+# Additive helpers only: `diagnostic_samples` for other crates' catalog tests
+# and `install_script` for tests that need a script to run. It changes no
+# behaviour of `run_within`.
+test-support = ["dep:file-system"]

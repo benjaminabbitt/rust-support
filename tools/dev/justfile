@@ -1,0 +1,72 @@
+# The `dev` module: cross-project dependency automation (file system references
+# for development, full-hash pins on commit, push sequencing). Consume it with
+#
+#     mod? dev '.dev'        # in the repository's justfile; .dev is a gitignored
+#                            # symlink to this directory (see README.md, install.sh)
+#
+# `mod?` makes it optional: a fresh clone or CI without the sibling simply has
+# no `dev::` recipes. All logic is in dev.py; this file only names the recipes,
+# whose names and parameters are stable (README.md, "Recipes"). They run
+# against the repository `just` was invoked in.
+
+tool := source_directory() / "dev.py"
+run := "python3 -I " + tool + " --project " + invocation_directory()
+
+# Patch every git dependency to its sibling checkout (gitignored .cargo/config.toml)
+[group('dev')]
+[no-exit-message]
+local root="":
+    @{{run}} local {{root}}
+
+# Undo `local`: remove the generated config, restore Cargo.lock from git
+[group('dev')]
+[no-exit-message]
+local-off:
+    @{{run}} local-off
+
+# Regenerate the config if the lock's sources or a checkout changed (hooks; --quiet)
+[group('dev')]
+[no-exit-message]
+refresh *args:
+    @{{run}} refresh {{args}}
+
+# Move every pin of a registered dependency to its checkout's HEAD: [--dep NAME] [--dry-run] [--no-fetch] [--no-lock]
+[group('dev')]
+[no-exit-message]
+repin *args:
+    @{{run}} repin {{args}}
+
+# Pre-commit: no [patch]/path dependency/generated config, full-hash pins, sites agree
+[group('dev')]
+[no-exit-message]
+pins-check:
+    @{{run}} pins-check
+
+# Pre-push: every pinned hash is on its dependency's remote [--no-fetch]
+[group('dev')]
+[no-exit-message]
+pins-reachable *args:
+    @{{run}} pins-reachable {{args}}
+
+# Push repositories in dependency order; a dry run unless --go: [REPO...] [--go] [--no-fetch] [--keep-going]
+[group('dev')]
+[no-exit-message]
+land *args:
+    @{{run}} land {{args}}
+
+# This module's version
+[group('dev')]
+version:
+    @python3 -I {{tool}} version
+
+# Report the registry, the checkouts, the git sources and what is missing
+[group('dev')]
+[no-exit-message]
+doctor:
+    @{{run}} doctor
+
+# Run the module's self-test (throwaway repositories under /home/babbitt)
+[group('dev')]
+[no-exit-message]
+selftest:
+    @{{source_directory()}}/selftest.sh

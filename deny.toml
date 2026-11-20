@@ -1,0 +1,56 @@
+# cargo-deny: what may enter the dependency graph. `just lint-deps` runs it.
+
+[advisories]
+version = 2
+# RustSec advisories. An ignore needs the advisory id and why it does not
+# apply here.
+ignore = [
+  # RUSTSEC-2026-0459: the bundled SQLite (libsqlite3-sys 0.30.1, reached through
+  # sqlx 0.8's bundled sqlite feature in angzarr's `angzarr-store-sqlite`) can
+  # return uninitialized page-cache memory when a process opens a database beside a
+  # `-wal` file of a different page size. Exposed only to a database and -wal that a
+  # less trusted party could have written; ours live in the user's own ~/.ctxloom.
+  # sqlx-sqlite 0.8.6 requires libsqlite3-sys ^0.30.1, and sqlx 0.9.0 requires
+  # <0.38, so no released sqlx admits the fixed 0.39: a lock-only fix is impossible.
+  # Revisit when a sqlx release admits libsqlite3-sys >= 0.39.0 (or the store pins
+  # sqlx's main by rev); delete this entry then.
+  { id = "RUSTSEC-2026-0459", reason = "bundled SQLite via angzarr's store; databases are the user's own; upstream bump pending" },
+]
+
+[licenses]
+version = 2
+# rust-support is Apache-2.0 OR BSD-3-Clause; every license here is permissive.
+allow = [
+  "Apache-2.0",
+  "BSD-3-Clause",
+  "MIT",
+  "Unicode-3.0",
+  "Zlib",
+]
+confidence-threshold = 0.9
+
+[licenses.private]
+# Not ignored: the git dependencies (angzarr-proto) are `publish = false`
+# too, and their licenses are exactly what must be checked.
+ignore = false
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# A path dependency has no version; allowed for unpublished crates only.
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = [
+  # angzarr core: diagnostics, the YAML reader, presentation.
+  "https://github.com/angzarr-io/angzarr",
+  # angzarr-platform: the OS seam and the filesystem seam.
+  "https://github.com/angzarr-io/angzarr-platform",
+  # angzarr-embedded: the in-app runtime and its SQLite store.
+  "https://github.com/angzarr-io/angzarr-embedded",
+  # angzarr-router: angzarr-embedded's transitive dependency.
+  "https://github.com/angzarr-io/angzarr-router",
+]
