@@ -17,14 +17,14 @@ publish = false
 # holds one angzarr: a bump lands here first, then in each consumer, each
 # green. Full commits, never a branch. All of them are crates of the one
 # angzarr workspace (github.com/angzarr-io/angzarr).
-angzarr-diagnostic = { git = "https://github.com/angzarr-io/angzarr", rev = "8159ea33c883486d71cae08691216a779f9fcfda" }
-angzarr-yaml = { git = "https://github.com/angzarr-io/angzarr", rev = "8159ea33c883486d71cae08691216a779f9fcfda" }
-angzarr-presentation = { git = "https://github.com/angzarr-io/angzarr", rev = "8159ea33c883486d71cae08691216a779f9fcfda" }
+angzarr-diagnostic = { git = "https://github.com/angzarr-io/angzarr", rev = "52d48ccf4005da563fcf63c4e7babe66e281e53b" }
+angzarr-yaml = { git = "https://github.com/angzarr-io/angzarr", rev = "52d48ccf4005da563fcf63c4e7babe66e281e53b" }
+angzarr-presentation = { git = "https://github.com/angzarr-io/angzarr", rev = "52d48ccf4005da563fcf63c4e7babe66e281e53b" }
 # The OS seam and the filesystem seam over it.
-os = { git = "https://github.com/angzarr-io/angzarr", rev = "8159ea33c883486d71cae08691216a779f9fcfda" }
-file-system = { git = "https://github.com/angzarr-io/angzarr", rev = "8159ea33c883486d71cae08691216a779f9fcfda" }
+os = { git = "https://github.com/angzarr-io/angzarr", rev = "52d48ccf4005da563fcf63c4e7babe66e281e53b" }
+file-system = { git = "https://github.com/angzarr-io/angzarr", rev = "52d48ccf4005da563fcf63c4e7babe66e281e53b" }
 # The in-app runtime (its `sqlite` feature re-exports the SQLite store).
-angzarr-embedded = { git = "https://github.com/angzarr-io/angzarr", rev = "8159ea33c883486d71cae08691216a779f9fcfda" }
+angzarr-embedded = { git = "https://github.com/angzarr-io/angzarr", rev = "52d48ccf4005da563fcf63c4e7babe66e281e53b" }
 
 # This repository's own crates.
 cli-support = { path = "crates/adapters/driving/cli-support" }
