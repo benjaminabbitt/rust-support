@@ -89,11 +89,22 @@ def warn(msg):
 
 # ---- git and urls ---------------------------------------------------------
 
+# What a git hook's environment names about the repository being pushed or
+# committed. It would send every `git -C <other checkout>` here to that
+# repository, so it never reaches a git run on another checkout.
+REPO_ENV = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
+            "GIT_PREFIX", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES")
+
+
+def git_env(extra=None):
+    full = {k: v for k, v in os.environ.items() if k not in REPO_ENV}
+    if extra:
+        full.update(extra)
+    return full
+
+
 def git(directory, *args, env=None, check=False):
-    full = None
-    if env:
-        full = dict(os.environ)
-        full.update(env)
+    full = git_env(env)
     p = subprocess.run(["git", "-C", directory, *args], capture_output=True,
                        text=True, env=full)
     if check and p.returncode != 0:
@@ -1018,7 +1029,7 @@ def cmd_land(ctx, args):
                     break
         if not problem:
             for c in n.checks:
-                r = subprocess.run(c["run"], cwd=n.path, capture_output=True, text=True)
+                r = subprocess.run(c["run"], cwd=n.path, capture_output=True, text=True, env=git_env())
                 if r.returncode != 0:
                     problem = f"check '{c.get('name', ' '.join(c['run']))}' failed: {(r.stdout + r.stderr).strip()[-400:]}"
                     break
@@ -1038,7 +1049,7 @@ def cmd_land(ctx, args):
         span = f"{n.tip[:8]}..{n.head[:8]}" if n.tip else f"new branch at {n.head[:8]}"
         say(f"{tag}: push {n.ahead} commit(s) ({span}) to {n.remote} {n.branch}  [{n.path}]")
         if go:
-            r = subprocess.run(["git", "-C", n.path, "push", n.remote, f"HEAD:refs/heads/{n.branch}"])
+            r = subprocess.run(["git", "-C", n.path, "push", n.remote, f"HEAD:refs/heads/{n.branch}"], env=git_env())
             if r.returncode != 0:
                 say(f"FAIL {tag}: git push was refused (its hooks, the remote, or branch protection)")
                 rest = [x.name for x in order[idx:]]

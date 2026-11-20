@@ -322,6 +322,8 @@ git -C "$W/ws/lib" reset -q --hard HEAD~1            # lib's HEAD = its pushed t
 dev --project "$app" repin >/dev/null 2>&1 || true
 git -C "$app" checkout -q -- .
 ok_run dev --project "$app" pins-reachable           # everything pinned is on a remote
+# A hook's GIT_DIR (the repository being pushed) must not redirect git runs on the pinned checkouts.
+GIT_DIR="$app/.git" ok_run dev --project "$app" pins-reachable
 has 'ok|reachable'
 
 echo "== land"
