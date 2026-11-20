@@ -17,16 +17,14 @@
 # own .cargo/local-deps.toml patches
 # "https://github.com/benjaminabbitt/rust-support" onto ../rust-support.
 
-[patch."https://github.com/angzarr-io/angzarr-platform"]
-os = { path = "../../angzarr/angzarr-platform/crates/os" }
-file-system = { path = "../../angzarr/angzarr-platform/crates/file-system" }
-
-# angzarr-embedded (../../angzarr-embedded) is not patched: its checkout is
-# on a line without the `sqlite` feature at the pinned commit. Check out the
-# pinned line there and add
-#   [patch."https://github.com/angzarr-io/angzarr-embedded"]
-#   angzarr-embedded = { path = "../../angzarr-embedded/crates/angzarr-embedded" }
-# when co-developing it.
-
-# angzarr core (angzarr-diagnostic, angzarr-yaml, angzarr-presentation) has no
-# sibling checkout at a fixed path yet; add its [patch] here when it does.
+# angzarr is one workspace (github.com/angzarr-io/angzarr); co-developing it
+# means patching its crates from the checkout, e.g. (paths relative to this
+# checkout's root; `just dev::local` writes this from the registry):
+#
+#   [patch."https://github.com/angzarr-io/angzarr"]
+#   os = { path = "../angzarr/crates/os" }
+#   file-system = { path = "../angzarr/crates/file-system" }
+#   angzarr-diagnostic = { path = "../angzarr/crates/angzarr-diagnostic" }
+#   angzarr-yaml = { path = "../angzarr/crates/angzarr-yaml" }
+#   angzarr-presentation = { path = "../angzarr/crates/angzarr-presentation" }
+#   angzarr-embedded = { path = "../angzarr/crates/angzarr-embedded" }

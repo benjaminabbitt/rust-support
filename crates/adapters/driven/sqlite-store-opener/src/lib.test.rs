@@ -526,7 +526,7 @@ fn test_reading_a_store_with_a_migration_pending_migrates_it_and_reads_it() {
     assert_eq!(block_on(streams(&store)), 3, "both streams read back");
     assert_eq!(
         ledger(&home, &path),
-        [1, 2, 3, 4, 5, 6],
+        [1, 2, 3, 4, 5, 6, 7],
         "every migration applied"
     );
 }
@@ -593,7 +593,7 @@ fn test_a_store_newer_than_the_build_is_refused_and_left_as_it_was() {
     seeded(&home, &path, NEWER);
     let refusal = OpenError::Store(StoreError::NewerThanBuild {
         applied: 99,
-        build: 6,
+        build: 7,
     });
     let read = block_on(home.opener().open_existing(&path)).map(|found| found.is_some());
     assert_eq!(read, Err(refusal.clone()), "to read");

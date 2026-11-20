@@ -67,7 +67,7 @@ can leak in. `templates/` is not a crate: files consumers copy.
 
 ## OS and filesystem go through the platform seams
 
-All file I/O goes through angzarr-platform's `file-system` (`Fs`), and what
+All file I/O goes through angzarr's `file-system` crate (`Fs`), and what
 differs between operating systems lives in its `os` crate. `clippy.toml`
 disallows the `std::fs`, `std::path::Path` and `tempfile` methods that
 bypass it, and the `std::env` reads and writes: the environment is read once
@@ -111,9 +111,9 @@ re-exports it, and a `Failure` carries an `Exit`, never a raw code.
 
 Every dependency outside this repository is a git dependency pinned by full
 commit (never a branch) in the workspace `Cargo.toml`. The angzarr crates are
-pinned to the SAME commits as ctxloom-rs and taskloom pin them, so a
-consumer's lock holds one of each. An angzarr re-pin lands here first, then
-in taskloom, then in ctxloom-rs, each green.
+pinned to the SAME commit (one repository, github.com/angzarr-io/angzarr) as
+the consumers pin it, so a consumer's lock holds one angzarr. An angzarr re-pin
+lands here first, then in each consumer, each green.
 
 The consumers pin this repository by full commit too
 (`git = "https://github.com/benjaminabbitt/rust-support", rev = "<sha>"`), all its

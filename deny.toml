@@ -29,6 +29,33 @@ allow = [
 ]
 confidence-threshold = 0.9
 
+# angzarr's shared runtime crates are AGPL-3.0-only with the angzarr runtime
+# exception (its LICENSE-EXCEPTION), which frees an application that links
+# them. Each is allowed by name; no other copyleft is.
+[[licenses.exceptions]]
+crate = "angzarr-bus"
+allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
+
+[[licenses.exceptions]]
+crate = "angzarr-diagnostic"
+allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
+
+[[licenses.exceptions]]
+crate = "angzarr-embedded"
+allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
+
+[[licenses.exceptions]]
+crate = "angzarr-ports"
+allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
+
+[[licenses.exceptions]]
+crate = "angzarr-presentation"
+allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
+
+[[licenses.exceptions]]
+crate = "angzarr-yaml"
+allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
+
 [licenses.private]
 # Not ignored: the git dependencies (angzarr-proto) are `publish = false`
 # too, and their licenses are exactly what must be checked.
@@ -45,12 +72,6 @@ unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
-  # angzarr core: diagnostics, the YAML reader, presentation.
+  # angzarr: core, the OS and filesystem seams, the in-app runtime.
   "https://github.com/angzarr-io/angzarr",
-  # angzarr-platform: the OS seam and the filesystem seam.
-  "https://github.com/angzarr-io/angzarr-platform",
-  # angzarr-embedded: the in-app runtime and its SQLite store.
-  "https://github.com/angzarr-io/angzarr-embedded",
-  # angzarr-router: angzarr-embedded's transitive dependency.
-  "https://github.com/angzarr-io/angzarr-router",
 ]
