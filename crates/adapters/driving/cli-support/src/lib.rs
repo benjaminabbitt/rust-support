@@ -15,10 +15,11 @@ mod notices;
 mod report;
 
 pub use args::{
-    detailed_exitcode, detailed_exitcode_arg, emit, emit_or, flag, many, one, DETAILED_EXITCODE,
+    detailed_exitcode, detailed_exitcode_arg, emit, emit_or, exit_statuses, flag, many, one,
+    DETAILED_EXITCODE,
 };
 pub use call::{Call, Failure};
-pub use exit::{convention, usage_exit, Class, Exit, ExitClass};
+pub use exit::{convention, usage_exit, Class, Exit, ExitClass, ExitStatuses};
 pub use notices::{say_notices, say_warning, FixOf};
 pub use report::{report_failure, say_failure, ReportText, Reported};
 

@@ -72,7 +72,8 @@ lose information.
 
 | code | name             | class   | when                                                                                   |
 |------|------------------|---------|----------------------------------------------------------------------------------------|
-| 16   | ok               | success | the command succeeded; also a dry run or preview that succeeded (0 without the flag)   |
+| 0    | ok               | success | the command succeeded; also a dry run or preview that succeeded (16 under the flag)    |
+| 16   | detailed ok      | success | ok, as reported under `--detailed-exitcode` (0 without the flag)                       |
 | 17   | would change     | success | a dry run or preview succeeded and applying it would change something (0 without the flag) |
 | 32   | failed           | failure | the command tried and something broke: I/O, a store, a child program, the network     |
 | 48   | refused          | decline | the request or the state forbids it: a bad argument, a usage error, a taken name, unreadable configuration |
@@ -251,7 +252,7 @@ never published, so they have no new number.
 
 | old   | name             | new                                    |
 |-------|------------------|----------------------------------------|
-| 0     | ok               | 16 (0 without the flag, as before)     |
+| 0     | ok               | 0 (16, detailed ok, under the flag)    |
 | 1     | would change     | 17                                     |
 | 10    | failed           | 32                                     |
 | 20    | refused          | 48                                     |
@@ -271,11 +272,14 @@ In the `exit-code` crate (pure: no I/O and no parser, so a program's core
 may name its errors' classes with it, and re-exported by `cli-support`, the
 command-line edge) the convention is the type `Exit` (and its `Class`):
 constructors for each block that refuse a code outside it
-(`Exit::success`, `Exit::failed`, `Exit::declined`, `Exit::signal`), the
-defined codes as constants (`Exit::OK`, `Exit::WOULD_CHANGE`,
+(`Exit::success`, `Exit::failed`, `Exit::declined`, `Exit::signal`),
+the defined codes as constants (`Exit::OK`, `Exit::DETAILED_OK`, `Exit::WOULD_CHANGE`,
 `Exit::FAILED`, `Exit::REFUSED`, `Exit::FATAL_FINDINGS`), `Exit::code`, the
 single function that turns an exit and the `--detailed-exitcode` flag into
-the process's status and holds the collapse rule, `Exit::worst` (and the
+the process's status and holds the collapse rule (and reports `OK` as
+`DETAILED_OK`'s 16 under the flag), `ExitStatuses`, the flag bound once
+at the edge (`ExitStatuses::new(detailed)`, then `code(exit)` and
+`process(exit)`) so the code that chooses an exit never carries it, `Exit::worst` (and the
 type's ordering), which is the severity order, and `Exit::from_child_status`,
 which says a child program's status in the classes (a child that follows this convention is read by its blocks with `Exit::from_convention_child_status`), and `Exit::usage`, which maps
 an argument parser's verdict to 48 for a usage error (or to ok for help and
@@ -283,4 +287,4 @@ version). An error type says its own class by implementing `ExitClass`. In
 `cli-support`, a command's `Failure` carries its `Exit` (`Failure::of` takes
 it from an `ExitClass` error), `usage_exit` reads a clap error, and
 `detailed_exitcode_arg` and `detailed_exitcode` declare and read the global
-flag.
+flag, and `exit_statuses` reads it into the line's `ExitStatuses`.

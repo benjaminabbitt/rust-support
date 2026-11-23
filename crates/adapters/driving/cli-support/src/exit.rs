@@ -1,7 +1,7 @@
 //! The exit a command ends with: `exit-code`'s [`Exit`], with what the
 //! command line adds to it (a parser's error as an exit).
 
-pub use exit_code::{convention, Class, Exit, ExitClass};
+pub use exit_code::{convention, Class, Exit, ExitClass, ExitStatuses};
 
 /// The exit of an argument parser's error: a usage error is refused (48,
 /// never clap's own 2); a request for help or the version is ok (0).

@@ -73,6 +73,26 @@ fn test_the_detailed_exitcode_flag_is_global_and_off_unless_given() {
 }
 
 #[test]
+fn test_the_exit_statuses_of_a_line_bind_its_detailed_exitcode_flag() {
+    let command = Command::new("demo")
+        .arg(crate::detailed_exitcode_arg())
+        .subcommand(Command::new("sub"));
+    let given = command
+        .clone()
+        .try_get_matches_from(["demo", "sub", "--detailed-exitcode"])
+        .expect("parsed");
+    let statuses = crate::exit_statuses(&given);
+    assert_eq!(statuses, crate::ExitStatuses::new(true));
+    assert_eq!(statuses.code(Exit::OK), 16);
+    let plain = command
+        .try_get_matches_from(["demo", "sub"])
+        .expect("parsed");
+    let statuses = crate::exit_statuses(&plain);
+    assert_eq!(statuses, crate::ExitStatuses::new(false));
+    assert_eq!(statuses.code(Exit::WOULD_CHANGE), 0);
+}
+
+#[test]
 fn test_the_flag_help_names_the_success_block_and_would_change_code() {
     let help = crate::detailed_exitcode_arg()
         .get_help()

@@ -74,3 +74,9 @@ pub fn detailed_exitcode_arg() -> Arg {
 pub fn detailed_exitcode(matches: &ArgMatches) -> bool {
     flag(matches, DETAILED_EXITCODE)
 }
+
+/// The line's [`ExitStatuses`](crate::ExitStatuses): its `--detailed-exitcode`
+/// flag, read once and bound, for the edge to turn every exit into a status.
+pub fn exit_statuses(matches: &ArgMatches) -> crate::ExitStatuses {
+    crate::ExitStatuses::new(detailed_exitcode(matches))
+}

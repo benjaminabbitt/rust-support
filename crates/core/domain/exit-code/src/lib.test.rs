@@ -7,28 +7,77 @@ use std::panic::catch_unwind;
 
 use super::*;
 
-/// The codes of the success block: 16 to 31 (16 is ok).
-const SUCCESSES: [u8; 16] = [
-    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+/// The codes of the success block: 0 (ok), and 16 to 31 (16 is detailed ok).
+const SUCCESSES: [u8; 17] = [
+    0, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
 ];
 
 #[test]
-fn test_the_defined_codes_are_sixteen_seventeen_thirty_two_forty_eight_and_forty_nine() {
+fn test_the_defined_codes_are_zero_sixteen_seventeen_thirty_two_forty_eight_and_forty_nine() {
+    assert_eq!(Exit::OK, Exit::success(0));
+    assert_eq!(Exit::DETAILED_OK, Exit::success(16));
     let detailed = [
         Exit::OK,
+        Exit::DETAILED_OK,
         Exit::WOULD_CHANGE,
         Exit::FAILED,
         Exit::REFUSED,
         Exit::FATAL_FINDINGS,
     ]
     .map(|exit| exit.code(true));
-    assert_eq!(detailed, [16, 17, 32, 48, 49]);
+    assert_eq!(detailed, [16, 16, 17, 32, 48, 49]);
+}
+
+// The generator: the flag is bound once, at the edge, and every exit is
+// turned into its status through it; nothing else carries the flag.
+#[test]
+fn test_the_statuses_without_the_flag_collapse_every_success_to_zero() {
+    let statuses = ExitStatuses::new(false);
+    assert!(!statuses.detailed());
+    for code in SUCCESSES {
+        assert_eq!(statuses.code(Exit::success(code)), 0, "success {code}");
+    }
+    assert_eq!(statuses.code(Exit::FAILED), 32);
+    assert_eq!(statuses.code(Exit::REFUSED), 48);
+    assert_eq!(statuses.code(Exit::signal(15)), 143);
 }
 
 #[test]
-fn test_ok_is_zero_without_the_flag_and_sixteen_with_it() {
+fn test_the_statuses_with_the_flag_put_every_success_in_sixteen_to_thirty_one() {
+    let statuses = ExitStatuses::new(true);
+    assert!(statuses.detailed());
+    assert_eq!(statuses.code(Exit::OK), 16);
+    assert_eq!(statuses.code(Exit::DETAILED_OK), 16);
+    assert_eq!(statuses.code(Exit::WOULD_CHANGE), 17);
+    for code in SUCCESSES {
+        assert_eq!(statuses.code(Exit::success(code)) >> 4, 1, "success {code}");
+    }
+    assert_eq!(statuses.code(Exit::FAILED), 32);
+}
+
+#[test]
+fn test_the_statuses_agree_with_the_exit_for_every_exit_and_flag() {
+    let exits = SUCCESSES
+        .map(Exit::success)
+        .into_iter()
+        .chain((32..=47).map(Exit::failed))
+        .chain((48..=63).map(Exit::declined))
+        .chain((1..=127).map(Exit::signal));
+    for exit in exits {
+        for detailed in [false, true] {
+            let statuses = ExitStatuses::new(detailed);
+            assert_eq!(statuses.code(exit), exit.code(detailed), "{exit:?} {detailed}");
+            assert_eq!(statuses.process(exit), exit.process(detailed), "{exit:?} {detailed}");
+        }
+    }
+}
+
+#[test]
+fn test_ok_is_zero_without_the_flag_and_detailed_ok_with_it() {
     assert_eq!(Exit::OK.code(false), 0);
-    assert_eq!(Exit::OK.code(true), 16);
+    assert_eq!(Exit::OK.code(true), Exit::DETAILED_OK.code(true));
+    assert_eq!(Exit::DETAILED_OK.code(false), 0);
+    assert_eq!(Exit::DETAILED_OK.code(true), 16);
 }
 
 // The one-comparison success test a caller of `--detailed-exitcode` writes:
@@ -51,6 +100,7 @@ fn test_with_the_flag_every_success_and_only_a_success_has_high_nibble_one() {
 #[test]
 fn test_each_defined_code_is_of_its_class() {
     assert_eq!(Exit::OK.class(), Class::Success);
+    assert_eq!(Exit::DETAILED_OK.class(), Class::Success);
     assert_eq!(Exit::WOULD_CHANGE.class(), Class::Success);
     assert_eq!(Exit::FAILED.class(), Class::Failed);
     assert_eq!(Exit::REFUSED.class(), Class::Declined);
@@ -62,7 +112,7 @@ fn test_a_distinguishing_success_collapses_to_zero_without_the_flag() {
     for code in SUCCESSES {
         let exit = Exit::success(code);
         assert_eq!(exit.code(false), 0, "success {code} without the flag");
-        assert_eq!(exit.code(true), code, "success {code} with the flag");
+        assert_eq!(exit.code(true), code.max(16), "success {code} with the flag");
         assert_eq!(exit.class(), Class::Success);
     }
 }
@@ -96,11 +146,8 @@ fn test_only_a_signal_has_a_signal_number() {
 }
 
 #[test]
-fn test_a_success_is_a_code_from_sixteen_to_thirty_one() {
-    assert!(
-        catch_unwind(|| Exit::success(0)).is_err(),
-        "0 is ok's collapsed status, not a code: ok is 16"
-    );
+fn test_a_success_is_zero_or_a_code_from_sixteen_to_thirty_one() {
+    assert!(catch_unwind(|| Exit::success(0)).is_ok());
     assert!(catch_unwind(|| Exit::success(16)).is_ok());
     assert!(catch_unwind(|| Exit::success(31)).is_ok());
     for code in [1, 2, 15] {
@@ -147,7 +194,7 @@ fn test_a_decline_is_a_code_from_forty_eight_to_sixty_three() {
 
 #[test]
 fn test_the_blocks_are_sixteen_wide_and_the_class_is_the_high_nibble() {
-    for (code, nibble) in [(16, 1), (31, 1), (32, 2), (47, 2), (48, 3), (63, 3)] {
+    for (code, nibble) in [(0, 1), (16, 1), (31, 1), (32, 2), (47, 2), (48, 3), (63, 3)] {
         let exit = match nibble {
             1 => Exit::success(code),
             2 => Exit::failed(code),
@@ -237,9 +284,25 @@ fn test_the_severity_order_is_the_order_of_the_detailed_codes() {
         Exit::FAILED,
         Exit::REFUSED,
         Exit::WOULD_CHANGE,
+        Exit::DETAILED_OK,
     ];
     exits.sort();
-    assert_eq!(exits.map(|exit| exit.code(true)), [16, 17, 32, 48, 49, 130]);
+    assert_eq!(
+        exits,
+        [
+            Exit::OK,
+            Exit::DETAILED_OK,
+            Exit::WOULD_CHANGE,
+            Exit::FAILED,
+            Exit::REFUSED,
+            Exit::FATAL_FINDINGS,
+            Exit::signal(2),
+        ]
+    );
+    assert_eq!(
+        exits.map(|exit| exit.code(true)),
+        [16, 16, 17, 32, 48, 49, 130]
+    );
 }
 
 #[test]
@@ -299,7 +362,7 @@ fn test_a_child_status_is_said_in_the_classes() {
 fn test_a_child_that_follows_the_convention_is_read_by_its_blocks() {
     let of = |code, signal| Exit::from_convention_child_status(code, signal);
     assert_eq!(of(Some(0), None), Exit::OK, "its collapsed ok");
-    assert_eq!(of(Some(16), None), Exit::OK, "its detailed ok");
+    assert_eq!(of(Some(16), None), Exit::DETAILED_OK, "its detailed ok");
     for code in 16..=31 {
         assert_eq!(of(Some(code), None), Exit::success(code as u8), "{code}");
     }

@@ -99,8 +99,8 @@ for each consuming binary to assemble. Generated code is never committed.
 
 ## Exit codes follow docs/exit-codes.md
 
-`docs/exit-codes.md` is the exit-code convention (blocks, 16 wide and 16-aligned: 16-31 successes (16 ok), every
-success 0 without `--detailed-exitcode`; 32-47 failures; 48-63 declines; 128+n
+`docs/exit-codes.md` is the exit-code convention (blocks, 16 wide and 16-aligned: 0 ok and 16-31 successes, every
+success 0 without `--detailed-exitcode` and in 16-31 with it, ok as 16; 32-47 failures; 48-63 declines; 128+n
 signals; 1-15, 64-78, 101, 126-127 and 255 are not used; the higher detailed
 code is the more severe), written to be copied
 unchanged into any project. The core crate `exit-code`'s `Exit` encodes it
