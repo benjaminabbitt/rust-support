@@ -36,8 +36,8 @@ with no angzarr in its dependency graph.
   check, as a rust-support gate, so the leaf stays dependency-free.
 - **Co-development through `[patch]`, not repins.** While the steps are in
   flight, each repo builds against the others' worktrees through a
-  `[patch]` in an uncommitted `.cargo/config.toml` (rust-support's
-  `tools/dev` does this). Pins are bumped once per repo, to full commits,
+  `[patch]` in an uncommitted, gitignored cargo config (`cargo local-pins`
+  writes it as `.cargo/local-pins.toml`). Pins are bumped once per repo, to full commits,
   after everything is green. CI never sees the patches.
 
 ## What moves, what stays

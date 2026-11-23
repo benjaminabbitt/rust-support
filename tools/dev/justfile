@@ -1,5 +1,5 @@
-# The `dev` module: cross-project dependency automation (file system references
-# for development, full-hash pins on commit, push sequencing). Consume it with
+# The `dev` module: cross-project dependency automation (full-hash pins on
+# commit, push sequencing; path patches are `cargo local-pins`). Consume it with
 #
 #     mod? dev '.dev'        # in the repository's justfile; .dev is a gitignored
 #                            # symlink to this directory (see README.md, install.sh)
@@ -12,31 +12,13 @@
 tool := source_directory() / "dev.py"
 run := "python3 -I " + tool + " --project " + invocation_directory()
 
-# Patch every git dependency to its sibling checkout (gitignored .cargo/config.toml)
-[group('dev')]
-[no-exit-message]
-local root="":
-    @{{run}} local {{root}}
-
-# Undo `local`: remove the generated config, restore Cargo.lock from git
-[group('dev')]
-[no-exit-message]
-local-off:
-    @{{run}} local-off
-
-# Regenerate the config if the lock's sources or a checkout changed (hooks; --quiet)
-[group('dev')]
-[no-exit-message]
-refresh *args:
-    @{{run}} refresh {{args}}
-
 # Move every pin of a registered dependency to its checkout's HEAD: [--dep NAME] [--dry-run] [--no-fetch] [--no-lock]
 [group('dev')]
 [no-exit-message]
 repin *args:
     @{{run}} repin {{args}}
 
-# Pre-commit: no [patch]/path dependency/generated config, full-hash pins, sites agree
+# Pre-commit: no [patch]/path dependency/tracked local-pins file, full-hash pins, sites agree
 [group('dev')]
 [no-exit-message]
 pins-check:
