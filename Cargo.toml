@@ -15,6 +15,7 @@ publish = false
 [workspace.dependencies]
 # This repository's own crates.
 cli-support = { path = "crates/adapters/driving/cli-support" }
+companion = { path = "crates/adapters/driving/companion" }
 config-layers = { path = "crates/adapters/driven/config-layers" }
 process-env = { path = "crates/root/lib/process-env" }
 project-dir = { path = "crates/adapters/driven/project-dir" }
