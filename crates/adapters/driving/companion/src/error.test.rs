@@ -82,3 +82,18 @@ fn test_every_error_has_a_catalog_message_with_exactly_its_args() {
         "catalog messages and samples, with their args"
     );
 }
+
+#[test]
+fn test_display_is_the_code_and_args_never_english() {
+    use diagnostic::Diagnostic;
+
+    for sample in diagnostic_samples() {
+        assert_eq!(
+            sample.to_string(),
+            diagnostic::Report::of(&*sample).to_string(),
+            "{}",
+            sample.code()
+        );
+        assert!(sample.to_string().starts_with(sample.code()), "{sample}");
+    }
+}
