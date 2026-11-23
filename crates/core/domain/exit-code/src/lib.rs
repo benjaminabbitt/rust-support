@@ -4,15 +4,16 @@
 //! driving edge turns the class into the process's status.
 //!
 //! The codes come in blocks, each 16 wide and 16-aligned (the class is
-//! `status >> 4`): 0 ok and 16-31 successes, 32-47 failures, 48-63 declines,
+//! `status >> 4`): 16-31 successes (16 ok), 32-47 failures, 48-63 declines,
 //! 128+n a signal; 1-15 are left to generic errors (1, and 2 for a usage
 //! error), 64-78 to sysexits.h, 101 to a Rust panic, 126-127 to the shell and
 //! 255 to an out-of-range status. Only the success block collapses: by long
 //! Unix convention a non-zero status is an error (`set -e`, `&&`, make and CI
 //! all read it so), so a success exits 0 unless the caller opted in with
-//! `--detailed-exitcode`, and only then are the distinguishing successes
-//! 16-31 returned. A failure or a decline is already non-zero and reads correctly
-//! as an error, so it is always returned as it is.
+//! `--detailed-exitcode`. Under the flag every success, ok included, is its
+//! code in 16-31, so `status >> 4 == 1` is the whole success test. A failure
+//! or a decline is already non-zero and reads correctly as an error, so it is
+//! always returned as it is.
 
 use std::process::ExitCode;
 
@@ -22,7 +23,7 @@ const SIGNAL_BASE: u8 = 128;
 /// The class of an [`Exit`]: which block its code is in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Class {
-    /// 0 and 16-31: the command did what was asked.
+    /// 16-31: the command did what was asked (0 without the flag).
     Success,
     /// 32-47: the command tried, and something broke.
     Failed,
@@ -40,11 +41,11 @@ pub enum Class {
 pub struct Exit(u8);
 
 impl Exit {
-    /// 0: the command succeeded.
-    pub const OK: Exit = Exit(0);
-    /// 16: a dry run or preview succeeded, and applying it would change
-    /// something (returned only under `--detailed-exitcode`).
-    pub const WOULD_CHANGE: Exit = Exit(16);
+    /// 16: the command succeeded (0 without `--detailed-exitcode`).
+    pub const OK: Exit = Exit(16);
+    /// 17: a dry run or preview succeeded, and applying it would change
+    /// something (0 without `--detailed-exitcode`).
+    pub const WOULD_CHANGE: Exit = Exit(17);
     /// 32: the command tried and something broke.
     pub const FAILED: Exit = Exit(32);
     /// 48: the request or the state forbids it (a usage error too).
@@ -52,11 +53,13 @@ impl Exit {
     /// 49: the input was examined and cannot produce a working result.
     pub const FATAL_FINDINGS: Exit = Exit(49);
 
-    /// The success `code`, 0 or 16 to 31. Panics on any other.
+    /// The success `code`, 16 to 31 (16 is [`OK`](Exit::OK)). Panics on any
+    /// other, 0 included: 0 is the status every success collapses to, not a
+    /// code of its own.
     pub const fn success(code: u8) -> Exit {
         assert!(
-            code == 0 || (16 <= code && code <= 31),
-            "a success is the code 0 or a code from 16 to 31"
+            16 <= code && code <= 31,
+            "a success is a code from 16 to 31"
         );
         Exit(code)
     }
@@ -103,7 +106,7 @@ impl Exit {
     /// The block this exit is in.
     pub const fn class(self) -> Class {
         match self.0 {
-            0 | 16..=31 => Class::Success,
+            16..=31 => Class::Success,
             32..=47 => Class::Failed,
             48..=63 => Class::Declined,
             _ => Class::Signalled,
@@ -120,7 +123,8 @@ impl Exit {
 
     /// The process's exit status. This is the one place the collapse rule
     /// lives: without `detailed` (the `--detailed-exitcode` flag) a success
-    /// is 0 whatever its code; every other exit is its code.
+    /// is 0 whatever its code; with it, and for every other exit, the status
+    /// is the code, so a detailed success is always in 16-31.
     pub const fn code(self, detailed: bool) -> u8 {
         match self.class() {
             Class::Success if !detailed => 0,
@@ -135,7 +139,7 @@ impl Exit {
 
     /// The exit of a child program that ended with `code`, or was ended by
     /// `signal`: a child's own codes are not this convention's, so none is
-    /// passed through (its 16 would read as a success subcode). Ok for 0; the
+    /// passed through (its 17 would read as a success subcode). Ok for 0; the
     /// signal for a signal in 1..=127, or a shell's 128 plus one; failed (32)
     /// for any other status, or none. For a child that follows this
     /// convention itself, see [`from_convention_child_status`](Exit::from_convention_child_status).
@@ -149,7 +153,7 @@ impl Exit {
     }
 
     /// The exit of a child program that follows this convention, read by its
-    /// blocks: 0 is ok, 16-31 the success subcode, 32-47 the failure, 48-63
+    /// blocks: 0 (its collapsed success) is ok, 16-31 the success, 32-47 the failure, 48-63
     /// the decline; a signal (or a shell's 128 plus one) is the signal, as in
     /// [`from_child_status`](Exit::from_child_status); any other status, or
     /// none, is failed (32). Use it only for a child known to follow the

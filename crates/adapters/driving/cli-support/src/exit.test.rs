@@ -80,6 +80,10 @@ fn test_the_flag_help_names_the_success_block_and_would_change_code() {
         .to_string();
     assert!(help.contains("16-31"), "{help}");
     assert!(
+        help.contains(&format!("{}: ok", Exit::OK.code(true))),
+        "{help}"
+    );
+    assert!(
         help.contains(&format!("{}: would change", Exit::WOULD_CHANGE.code(true))),
         "{help}"
     );

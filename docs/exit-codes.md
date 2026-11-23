@@ -10,9 +10,9 @@ An exit code says which of four things happened, by the block it falls in:
 
 | codes   | class    | meaning                                                        |
 |---------|----------|----------------------------------------------------------------|
-| 0       | success  | the command did what was asked                                 |
+| 0       | success  | the command did what was asked (every success, without the flag) |
 | 1-15    | (none)   | not used by this convention: left to generic errors            |
-| 16-31   | success  | a distinguishing success (only under `--detailed-exitcode`)    |
+| 16-31   | success  | the command did what was asked (every success, under `--detailed-exitcode`; 16 is ok) |
 | 32-47   | failure  | the command tried, and something broke                         |
 | 48-63   | decline  | the command did not try: the request or the state forbids it   |
 | 64-78   | (none)   | not used: BSD `sysexits.h`                                     |
@@ -24,9 +24,22 @@ An exit code says which of four things happened, by the block it falls in:
 Codes not listed (79-100, 102-125) belong to no block and are not used.
 
 The blocks are 16 wide and 16-aligned, so the class is the high nibble of the
-status: `status >> 4` is 0 or 1 for a success, 2 for a failure, 3 for a
-decline, and 8 or more for a signal. A caller that only cares about the class
-tests that, or the range (`32 <= status && status <= 47` is a failure).
+status: under `--detailed-exitcode`, `status >> 4` is 1 for a success, 2 for
+a failure, 3 for a decline, and 8 or more for a signal (255, out of range,
+reads as 15 and is no signal a program sends). A caller that only cares
+about the class tests that, or the range (`32 <= status && status <= 47` is
+a failure). The high nibble 0 (statuses 1-15) is no class: a generic error,
+a crash or an argument parser's own status lands there, and is never
+mistaken for a success.
+
+The success test is one comparison:
+
+```sh
+cmd --detailed-exitcode; status=$?
+[ $(( status >> 4 )) -eq 1 ] && echo success   # subcode: $(( status & 15 ))
+```
+
+Without the flag the test is the usual `status == 0`.
 
 The low integers are not in any block because they are the codes every
 program already means something by: 1 is the catch-all for a general error
@@ -35,10 +48,12 @@ A success subcode must never be one of them: a caller that reads any
 non-zero status as an error would be right and the program wrong. See
 [Reserved ranges](#reserved-ranges-and-what-a-program-must-not-use).
 
-Within the success classes, 0 is a plain success and 16-31 are *distinguishing*
-successes: the command succeeded, and it has something more to say about how.
-They are returned **only** when the caller asked for them with
-`--detailed-exitcode`. Without that flag every success exits 0.
+Under `--detailed-exitcode` every success is its code in 16-31: 16 is a
+plain success (ok), and 17-31 are *distinguishing* successes: the command
+succeeded, and it has something more to say about how. Without that flag
+every success exits 0. A plain success is 16, not 0, under the flag so that
+one test (`status >> 4 == 1`) covers every success: were it 0, the success
+classes would straddle 1-15, which no single mask or range can leave out.
 
 ### Why only the success block collapses
 
@@ -46,7 +61,7 @@ By long Unix convention a non-zero exit status means an error. `set -e`,
 `&&`, `||`, make and every CI system treat any non-zero status as a failure.
 A success must therefore exit 0 unless the caller has said it understands
 otherwise, which is what `--detailed-exitcode` is: the caller opting in to
-reading 16-31 as successes.
+reading 16-31, and only 16-31, as successes.
 
 The failure (32-47) and decline (48-63) blocks are always returned as they
 are, with or without the flag. They are already non-zero, so under that same
@@ -57,8 +72,8 @@ lose information.
 
 | code | name             | class   | when                                                                                   |
 |------|------------------|---------|----------------------------------------------------------------------------------------|
-| 0    | ok               | success | the command succeeded; also a dry run or preview that succeeded                       |
-| 16   | would change     | success | a dry run or preview succeeded and applying it would change something (flag only)     |
+| 16   | ok               | success | the command succeeded; also a dry run or preview that succeeded (0 without the flag)   |
+| 17   | would change     | success | a dry run or preview succeeded and applying it would change something (0 without the flag) |
 | 32   | failed           | failure | the command tried and something broke: I/O, a store, a child program, the network     |
 | 48   | refused          | decline | the request or the state forbids it: a bad argument, a usage error, a taken name, unreadable configuration |
 | 49   | fatal findings   | decline | the command examined its input and found it cannot produce a working result            |
@@ -66,7 +81,7 @@ lose information.
 
 What belongs where:
 
-- **Success (0, 16-31).** Anything that completed as asked. A dry run, a preview
+- **Success (16-31; 0 without the flag).** Anything that completed as asked. A dry run, a preview
   or a check that ran to its end is a success even when what it reports is
   that something would change; the distinction is a success subcode, not an
   error.
@@ -84,16 +99,16 @@ What belongs where:
   signal, kept so that a program that catches a signal, cleans up and exits
   reads to its caller exactly as if the signal had ended it.
 
-An argument parser's request for help or for the version is a success (0),
+An argument parser's request for help or for the version is a success (ok),
 not a usage error.
 
 A child program's own exit status is not one of these codes by default, and
-is never passed through as it is: a child's 16 would read as a success
+is never passed through as it is: a child's 17 would read as a success
 subcode. It is said in the classes: 0 is ok, a child ended by signal `n` (or
 a shell's `128+n`) is signal `n`, and any other status is a failure (32).
 
 A child known to follow this convention can be read by its blocks instead:
-0 is ok, 16-31 is that success subcode, 32-47 that failure, 48-63 that
+0 (its collapsed success) is ok, 16-31 is that success, 32-47 that failure, 48-63 that
 decline, a signal is a signal, and any status outside the blocks (1, 2, 64-78,
 101, 126, 127, ...) is still a failure (32). This is opt-in because a child
 that does not follow the convention would have its own 16 to 63 misread.
@@ -106,11 +121,11 @@ and another was declined. It exits with the **most severe**, and severity is
 the order of the codes themselves:
 
 ```text
-signal (128+n)  >  decline (48-63)  >  failure (32-47)  >  success (0, 16-31)
+signal (128+n)  >  decline (48-63)  >  failure (32-47)  >  success (16-31)
 ```
 
 and within a block the higher code wins (49 fatal findings over 48 refused;
-16 would change over 0 ok; signal 15 over signal 2). One rule, "the higher
+17 would change over 16 ok; signal 15 over signal 2). One rule, "the higher
 detailed code wins", is the whole order.
 
 Why a decline outranks a failure: a decline is a definitive verdict on the
@@ -136,13 +151,13 @@ A dry run that succeeds exits 0 in the tools people already script against:
 dry run itself worked, whatever it found. `terraform plan
 -detailed-exitcode` is the model for the opt-in: it exits 0 for no changes,
 2 for changes present and 1 for an error. This convention keeps the opt-in
-and moves the distinguishing successes into a block of their own (16-31),
+and moves every success, ok included, into a block of its own (16-31),
 clear of the low codes (1 and 2) that generic errors already use, so a
-success subcode can never be confused with an error code.
+success can never be confused with an error code and one test finds it.
 
 The blocks are sixteen wide so that each class has room for subcodes. A
-caller that only cares about the class tests the block (`status >> 4 == 2` is
-a failure); a caller that cares about the detail reads the code. A
+caller that only cares about the class tests the block (`status >> 4 == 1` is
+a success, `== 2` a failure); a caller that cares about the detail reads the code. A
 new subcode never changes the class an existing caller sees.
 
 ## Reserved ranges and what a program must not use
@@ -158,7 +173,7 @@ them as special.
 
 | code    | meaning                                                                 |
 |---------|-------------------------------------------------------------------------|
-| 0       | success                                                                 |
+| 0       | success (this convention's, without `--detailed-exitcode`)              |
 | 1       | catch-all for general or unspecified errors                             |
 | 2       | misuse of a shell builtin; also the standard CLI usage or argument error (`argparse`, `clap`, GNU tools) |
 | 3-125   | free for an application's own codes (64-78 optionally follow `sysexits.h`; 101 is a Rust panic) |
@@ -212,11 +227,11 @@ as one of this convention's codes.
 
 1. Decide its class first: did the command succeed, try and break, or
    decline? The class is the block; it is what every existing caller reads.
-2. Take the next free code in that block: success 17-31, failure 33-47,
+2. Take the next free code in that block: success 18-31, failure 33-47,
    decline 50-63. Never reuse a code that was published with another
    meaning.
 3. A new success subcode is returned only under `--detailed-exitcode`, like
-   16. It must be a success the caller might want to branch on (as "would
+   17. It must be a success the caller might want to branch on (as "would
    change" is); a warning is not a subcode.
 4. Place it in the severity order: within its block, a higher code is more
    severe. If the new subcode should not outrank an existing one, it is the
@@ -231,22 +246,23 @@ The first layout put the blocks at 0-9 (successes), 10-19 (failures) and
 low application codes. The blocks moved to 16-aligned ranges above 15. Every
 published non-zero code changes; there is no compatibility mapping, and a
 caller that read the old numbers must be updated together with the program.
+Only the codes the old layout defined are mapped: its other subcodes were
+never published, so they have no new number.
 
 | old   | name             | new                                    |
 |-------|------------------|----------------------------------------|
-| 0     | ok               | 0                                      |
-| 1     | would change     | 16                                     |
-| 2-9   | success subcodes | 17-24 (old `n` is `n + 15`)            |
+| 0     | ok               | 16 (0 without the flag, as before)     |
+| 1     | would change     | 17                                     |
 | 10    | failed           | 32                                     |
-| 11-19 | failure subcodes | 33-41 (old `n` is `n + 22`)            |
 | 20    | refused          | 48                                     |
 | 21    | fatal findings   | 49                                     |
-| 22-29 | decline subcodes | 50-57 (old `n` is `n + 28`)            |
 | 128+n | signal n         | 128+n (unchanged)                      |
 
 A caller that tested a class by range moves from `10 <= status && status <=
 19` to `32 <= status && status <= 47` (or `status >> 4 == 2`), and a script
-that tested `status -eq 1` for "would change" tests 16. A usage error is now
+that tested `status -eq 1` for "would change" tests 17. Under the flag a
+plain success is 16, not 0: a script that tested `status -eq 0` with the
+flag tests `status -eq 16`, or `status >> 4 == 1` for any success. A usage error is now
 48, no longer 20.
 
 ## The type that encodes it
@@ -262,7 +278,7 @@ single function that turns an exit and the `--detailed-exitcode` flag into
 the process's status and holds the collapse rule, `Exit::worst` (and the
 type's ordering), which is the severity order, and `Exit::from_child_status`,
 which says a child program's status in the classes (a child that follows this convention is read by its blocks with `Exit::from_convention_child_status`), and `Exit::usage`, which maps
-an argument parser's verdict to 48 for a usage error (or to 0 for help and
+an argument parser's verdict to 48 for a usage error (or to ok for help and
 version). An error type says its own class by implementing `ExitClass`. In
 `cli-support`, a command's `Failure` carries its `Exit` (`Failure::of` takes
 it from an `ExitClass` error), `usage_exit` reads a clap error, and

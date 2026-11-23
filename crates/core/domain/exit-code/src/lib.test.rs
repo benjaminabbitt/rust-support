@@ -7,13 +7,13 @@ use std::panic::catch_unwind;
 
 use super::*;
 
-/// The codes of the success block: 0, and 16 to 31.
-const SUCCESSES: [u8; 17] = [
-    0, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+/// The codes of the success block: 16 to 31 (16 is ok).
+const SUCCESSES: [u8; 16] = [
+    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
 ];
 
 #[test]
-fn test_the_defined_codes_are_zero_sixteen_thirty_two_forty_eight_and_forty_nine() {
+fn test_the_defined_codes_are_sixteen_seventeen_thirty_two_forty_eight_and_forty_nine() {
     let detailed = [
         Exit::OK,
         Exit::WOULD_CHANGE,
@@ -22,7 +22,30 @@ fn test_the_defined_codes_are_zero_sixteen_thirty_two_forty_eight_and_forty_nine
         Exit::FATAL_FINDINGS,
     ]
     .map(|exit| exit.code(true));
-    assert_eq!(detailed, [0, 16, 32, 48, 49]);
+    assert_eq!(detailed, [16, 17, 32, 48, 49]);
+}
+
+#[test]
+fn test_ok_is_zero_without_the_flag_and_sixteen_with_it() {
+    assert_eq!(Exit::OK.code(false), 0);
+    assert_eq!(Exit::OK.code(true), 16);
+}
+
+// The one-comparison success test a caller of `--detailed-exitcode` writes:
+// `status >> 4 == 1`. It holds for every success, ok included, and for
+// nothing else the program can return.
+#[test]
+fn test_with_the_flag_every_success_and_only_a_success_has_high_nibble_one() {
+    for code in SUCCESSES {
+        assert_eq!(Exit::success(code).code(true) >> 4, 1, "success {code}");
+    }
+    let others = (32..=47)
+        .map(Exit::failed)
+        .chain((48..=63).map(Exit::declined))
+        .chain((1..=127).map(Exit::signal));
+    for exit in others {
+        assert_ne!(exit.code(true) >> 4, 1, "{exit:?}");
+    }
 }
 
 #[test]
@@ -73,8 +96,11 @@ fn test_only_a_signal_has_a_signal_number() {
 }
 
 #[test]
-fn test_a_success_is_zero_or_a_code_from_sixteen_to_thirty_one() {
-    assert!(catch_unwind(|| Exit::success(0)).is_ok());
+fn test_a_success_is_a_code_from_sixteen_to_thirty_one() {
+    assert!(
+        catch_unwind(|| Exit::success(0)).is_err(),
+        "0 is ok's collapsed status, not a code: ok is 16"
+    );
     assert!(catch_unwind(|| Exit::success(16)).is_ok());
     assert!(catch_unwind(|| Exit::success(31)).is_ok());
     for code in [1, 2, 15] {
@@ -121,9 +147,9 @@ fn test_a_decline_is_a_code_from_forty_eight_to_sixty_three() {
 
 #[test]
 fn test_the_blocks_are_sixteen_wide_and_the_class_is_the_high_nibble() {
-    for (code, nibble) in [(0, 0), (16, 1), (31, 1), (32, 2), (47, 2), (48, 3), (63, 3)] {
+    for (code, nibble) in [(16, 1), (31, 1), (32, 2), (47, 2), (48, 3), (63, 3)] {
         let exit = match nibble {
-            0 | 1 => Exit::success(code),
+            1 => Exit::success(code),
             2 => Exit::failed(code),
             _ => Exit::declined(code),
         };
@@ -213,7 +239,7 @@ fn test_the_severity_order_is_the_order_of_the_detailed_codes() {
         Exit::WOULD_CHANGE,
     ];
     exits.sort();
-    assert_eq!(exits.map(|exit| exit.code(true)), [0, 16, 32, 48, 49, 130]);
+    assert_eq!(exits.map(|exit| exit.code(true)), [16, 17, 32, 48, 49, 130]);
 }
 
 #[test]
@@ -225,8 +251,10 @@ fn test_a_usage_error_is_refused_and_help_or_version_is_ok() {
 #[test]
 fn test_the_process_exit_code_is_the_code_under_the_flag() {
     use std::process::ExitCode;
+    assert_eq!(Exit::OK.process(false), ExitCode::from(0));
+    assert_eq!(Exit::OK.process(true), ExitCode::from(16));
     assert_eq!(Exit::WOULD_CHANGE.process(false), ExitCode::from(0));
-    assert_eq!(Exit::WOULD_CHANGE.process(true), ExitCode::from(16));
+    assert_eq!(Exit::WOULD_CHANGE.process(true), ExitCode::from(17));
     assert_eq!(Exit::REFUSED.process(false), ExitCode::from(48));
 }
 
@@ -249,7 +277,7 @@ fn test_an_error_says_its_own_class() {
 #[test]
 fn test_a_child_status_is_said_in_the_classes() {
     let of = |code, signal| Exit::from_child_status(code, signal).code(true);
-    assert_eq!(of(Some(0), None), 0, "a child that exited 0 is ok");
+    assert_eq!(of(Some(0), None), 16, "a child that exited 0 is ok");
     for code in [1, 2, 9, 10, 16, 20, 21, 32, 48, 64, 127, 128, 256, -1] {
         assert_eq!(of(Some(code), None), 32, "a child's {code} failed");
     }
@@ -270,7 +298,8 @@ fn test_a_child_status_is_said_in_the_classes() {
 #[test]
 fn test_a_child_that_follows_the_convention_is_read_by_its_blocks() {
     let of = |code, signal| Exit::from_convention_child_status(code, signal);
-    assert_eq!(of(Some(0), None), Exit::OK);
+    assert_eq!(of(Some(0), None), Exit::OK, "its collapsed ok");
+    assert_eq!(of(Some(16), None), Exit::OK, "its detailed ok");
     for code in 16..=31 {
         assert_eq!(of(Some(code), None), Exit::success(code as u8), "{code}");
     }
