@@ -1,6 +1,6 @@
 [package]
 name = "exit-code"
-version = "0.1.0"
+version = "0.2.0"
 description = "The exit-code convention as a type: a command's class (success, failure, decline, signal), its code, the detailed-exitcode collapse and the severity order"
 edition.workspace = true
 rust-version.workspace = true

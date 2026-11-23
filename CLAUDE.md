@@ -99,9 +99,10 @@ for each consuming binary to assemble. Generated code is never committed.
 
 ## Exit codes follow docs/exit-codes.md
 
-`docs/exit-codes.md` is the exit-code convention (blocks: 0-9 successes, 1-9
-only under `--detailed-exitcode`; 10-19 failures; 20-29 declines; 128+n
-signals; the higher detailed code is the more severe), written to be copied
+`docs/exit-codes.md` is the exit-code convention (blocks, 16 wide and 16-aligned: 0 ok and 16-31 successes, 16-31
+only under `--detailed-exitcode`; 32-47 failures; 48-63 declines; 128+n
+signals; 1-15, 64-78, 101, 126-127 and 255 are not used; the higher detailed
+code is the more severe), written to be copied
 unchanged into any project. The core crate `exit-code`'s `Exit` encodes it
 (pure, so a consumer's core says its errors' classes with it), and its
 rustdoc renders the document (`exit_code::convention`); `cli-support`

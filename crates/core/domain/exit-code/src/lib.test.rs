@@ -1,13 +1,19 @@
 //! The exit pattern: the blocks and their bounds, the collapse of the
 //! distinguishing successes without `--detailed-exitcode`, the severity
-//! order, and the usage error's class.
+//! order across the blocks, a child's status said in the classes (by default
+//! and by the blocks), and the usage error's class.
 
 use std::panic::catch_unwind;
 
 use super::*;
 
+/// The codes of the success block: 0, and 16 to 31.
+const SUCCESSES: [u8; 17] = [
+    0, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+];
+
 #[test]
-fn test_the_defined_codes_are_zero_one_ten_twenty_and_twenty_one() {
+fn test_the_defined_codes_are_zero_sixteen_thirty_two_forty_eight_and_forty_nine() {
     let detailed = [
         Exit::OK,
         Exit::WOULD_CHANGE,
@@ -16,7 +22,7 @@ fn test_the_defined_codes_are_zero_one_ten_twenty_and_twenty_one() {
         Exit::FATAL_FINDINGS,
     ]
     .map(|exit| exit.code(true));
-    assert_eq!(detailed, [0, 1, 10, 20, 21]);
+    assert_eq!(detailed, [0, 16, 32, 48, 49]);
 }
 
 #[test]
@@ -30,7 +36,7 @@ fn test_each_defined_code_is_of_its_class() {
 
 #[test]
 fn test_a_distinguishing_success_collapses_to_zero_without_the_flag() {
-    for code in 0..=9 {
+    for code in SUCCESSES {
         let exit = Exit::success(code);
         assert_eq!(exit.code(false), 0, "success {code} without the flag");
         assert_eq!(exit.code(true), code, "success {code} with the flag");
@@ -40,12 +46,12 @@ fn test_a_distinguishing_success_collapses_to_zero_without_the_flag() {
 
 #[test]
 fn test_failures_declines_and_signals_never_collapse() {
-    for code in 10..=19 {
+    for code in 32..=47 {
         let exit = Exit::failed(code);
         assert_eq!((exit.code(false), exit.code(true)), (code, code));
         assert_eq!(exit.class(), Class::Failed);
     }
-    for code in 20..=29 {
+    for code in 48..=63 {
         let exit = Exit::declined(code);
         assert_eq!((exit.code(false), exit.code(true)), (code, code));
         assert_eq!(exit.class(), Class::Declined);
@@ -67,37 +73,63 @@ fn test_only_a_signal_has_a_signal_number() {
 }
 
 #[test]
-fn test_a_success_is_a_code_from_zero_to_nine() {
-    assert!(catch_unwind(|| Exit::success(9)).is_ok());
+fn test_a_success_is_zero_or_a_code_from_sixteen_to_thirty_one() {
+    assert!(catch_unwind(|| Exit::success(0)).is_ok());
+    assert!(catch_unwind(|| Exit::success(16)).is_ok());
+    assert!(catch_unwind(|| Exit::success(31)).is_ok());
+    for code in [1, 2, 15] {
+        assert!(
+            catch_unwind(|| Exit::success(code)).is_err(),
+            "{code} is left to generic errors"
+        );
+    }
     assert!(
-        catch_unwind(|| Exit::success(10)).is_err(),
-        "10 is a failure"
+        catch_unwind(|| Exit::success(32)).is_err(),
+        "32 is a failure"
     );
 }
 
 #[test]
-fn test_a_failure_is_a_code_from_ten_to_nineteen() {
-    assert!(catch_unwind(|| Exit::failed(9)).is_err(), "9 is a success");
-    assert!(catch_unwind(|| Exit::failed(10)).is_ok());
-    assert!(catch_unwind(|| Exit::failed(19)).is_ok());
+fn test_a_failure_is_a_code_from_thirty_two_to_forty_seven() {
     assert!(
-        catch_unwind(|| Exit::failed(20)).is_err(),
-        "20 is a decline"
+        catch_unwind(|| Exit::failed(31)).is_err(),
+        "31 is a success"
     );
+    assert!(catch_unwind(|| Exit::failed(32)).is_ok());
+    assert!(catch_unwind(|| Exit::failed(47)).is_ok());
+    assert!(
+        catch_unwind(|| Exit::failed(48)).is_err(),
+        "48 is a decline"
+    );
+    assert!(catch_unwind(|| Exit::failed(1)).is_err(), "1 is generic");
 }
 
 #[test]
-fn test_a_decline_is_a_code_from_twenty_to_twenty_nine() {
+fn test_a_decline_is_a_code_from_forty_eight_to_sixty_three() {
     assert!(
-        catch_unwind(|| Exit::declined(19)).is_err(),
-        "19 is a failure"
+        catch_unwind(|| Exit::declined(47)).is_err(),
+        "47 is a failure"
     );
-    assert!(catch_unwind(|| Exit::declined(20)).is_ok());
-    assert!(catch_unwind(|| Exit::declined(29)).is_ok());
+    assert!(catch_unwind(|| Exit::declined(48)).is_ok());
+    assert!(catch_unwind(|| Exit::declined(63)).is_ok());
     assert!(
-        catch_unwind(|| Exit::declined(30)).is_err(),
-        "30 is no block's"
+        catch_unwind(|| Exit::declined(64)).is_err(),
+        "64 is sysexits.h's"
     );
+    assert!(catch_unwind(|| Exit::declined(2)).is_err(), "2 is usage");
+}
+
+#[test]
+fn test_the_blocks_are_sixteen_wide_and_the_class_is_the_high_nibble() {
+    for (code, nibble) in [(0, 0), (16, 1), (31, 1), (32, 2), (47, 2), (48, 3), (63, 3)] {
+        let exit = match nibble {
+            0 | 1 => Exit::success(code),
+            2 => Exit::failed(code),
+            _ => Exit::declined(code),
+        };
+        assert_eq!(exit.code(true) >> 4, nibble, "code {code}");
+    }
+    assert_eq!(Exit::signal(1).code(true) >> 4, 8, "a signal is 128 and up");
 }
 
 #[test]
@@ -118,7 +150,7 @@ fn test_a_signal_is_numbered_from_one_to_one_hundred_twenty_seven() {
 fn test_a_decline_outranks_a_failure() {
     assert_eq!(Exit::FAILED.worst(Exit::REFUSED), Exit::REFUSED);
     assert_eq!(Exit::REFUSED.worst(Exit::FAILED), Exit::REFUSED);
-    assert_eq!(Exit::failed(19).worst(Exit::declined(20)), Exit::REFUSED);
+    assert_eq!(Exit::failed(47).worst(Exit::declined(48)), Exit::REFUSED);
 }
 
 #[test]
@@ -136,14 +168,38 @@ fn test_fatal_findings_outrank_a_refusal() {
 #[test]
 fn test_a_signal_outranks_everything_and_any_error_outranks_a_success() {
     let signal = Exit::signal(1);
-    for other in [Exit::OK, Exit::success(9), Exit::FAILED, Exit::declined(29)] {
+    for other in [
+        Exit::OK,
+        Exit::success(31),
+        Exit::FAILED,
+        Exit::declined(63),
+    ] {
         assert_eq!(signal.worst(other), signal, "{other:?}");
         assert_eq!(other.worst(signal), signal, "{other:?}");
     }
-    assert_eq!(Exit::success(9).worst(Exit::FAILED), Exit::FAILED);
+    assert_eq!(Exit::success(31).worst(Exit::FAILED), Exit::FAILED);
     assert_eq!(Exit::WOULD_CHANGE.worst(Exit::OK), Exit::WOULD_CHANGE);
     assert_eq!(Exit::OK.worst(Exit::WOULD_CHANGE), Exit::WOULD_CHANGE);
     assert_eq!(Exit::signal(2).worst(Exit::signal(15)), Exit::signal(15));
+}
+
+#[test]
+fn test_every_code_of_a_higher_block_outranks_every_code_of_a_lower_one() {
+    let blocks: [Vec<Exit>; 4] = [
+        SUCCESSES.map(Exit::success).to_vec(),
+        (32..=47).map(Exit::failed).collect(),
+        (48..=63).map(Exit::declined).collect(),
+        (1..=127).map(Exit::signal).collect(),
+    ];
+    for pair in blocks.windows(2) {
+        for (low, high) in pair[0]
+            .iter()
+            .flat_map(|l| pair[1].iter().map(move |h| (l, h)))
+        {
+            assert_eq!(low.worst(*high), *high, "{low:?} vs {high:?}");
+            assert!(low < high);
+        }
+    }
 }
 
 #[test]
@@ -157,7 +213,7 @@ fn test_the_severity_order_is_the_order_of_the_detailed_codes() {
         Exit::WOULD_CHANGE,
     ];
     exits.sort();
-    assert_eq!(exits.map(|exit| exit.code(true)), [0, 1, 10, 20, 21, 130]);
+    assert_eq!(exits.map(|exit| exit.code(true)), [0, 16, 32, 48, 49, 130]);
 }
 
 #[test]
@@ -170,8 +226,8 @@ fn test_a_usage_error_is_refused_and_help_or_version_is_ok() {
 fn test_the_process_exit_code_is_the_code_under_the_flag() {
     use std::process::ExitCode;
     assert_eq!(Exit::WOULD_CHANGE.process(false), ExitCode::from(0));
-    assert_eq!(Exit::WOULD_CHANGE.process(true), ExitCode::from(1));
-    assert_eq!(Exit::REFUSED.process(false), ExitCode::from(20));
+    assert_eq!(Exit::WOULD_CHANGE.process(true), ExitCode::from(16));
+    assert_eq!(Exit::REFUSED.process(false), ExitCode::from(48));
 }
 
 /// An error of a crate, which says its own class.
@@ -194,8 +250,8 @@ fn test_an_error_says_its_own_class() {
 fn test_a_child_status_is_said_in_the_classes() {
     let of = |code, signal| Exit::from_child_status(code, signal).code(true);
     assert_eq!(of(Some(0), None), 0, "a child that exited 0 is ok");
-    for code in [1, 2, 9, 10, 20, 21, 30, 127, 128, 256, -1] {
-        assert_eq!(of(Some(code), None), 10, "a child's {code} failed");
+    for code in [1, 2, 9, 10, 16, 20, 21, 32, 48, 64, 127, 128, 256, -1] {
+        assert_eq!(of(Some(code), None), 32, "a child's {code} failed");
     }
     assert_eq!(of(Some(129), None), 129, "a shell's 128+1 is signal 1");
     assert_eq!(of(Some(143), None), 143, "a shell's 128+15 is signal 15");
@@ -205,7 +261,41 @@ fn test_a_child_status_is_said_in_the_classes() {
     assert_eq!(of(None, Some(127)), 255);
     assert_eq!(of(Some(0), Some(9)), 137, "the signal is what ended it");
     for signal in [0, 128, -9] {
-        assert_eq!(of(None, Some(signal)), 10, "no such signal: {signal}");
+        assert_eq!(of(None, Some(signal)), 32, "no such signal: {signal}");
     }
-    assert_eq!(of(None, None), 10, "a status that says nothing failed");
+    assert_eq!(of(None, None), 32, "a status that says nothing failed");
+}
+
+// A child that follows this convention is read by its blocks, on request.
+#[test]
+fn test_a_child_that_follows_the_convention_is_read_by_its_blocks() {
+    let of = |code, signal| Exit::from_convention_child_status(code, signal);
+    assert_eq!(of(Some(0), None), Exit::OK);
+    for code in 16..=31 {
+        assert_eq!(of(Some(code), None), Exit::success(code as u8), "{code}");
+    }
+    for code in 32..=47 {
+        assert_eq!(of(Some(code), None), Exit::failed(code as u8), "{code}");
+    }
+    for code in 48..=63 {
+        assert_eq!(of(Some(code), None), Exit::declined(code as u8), "{code}");
+    }
+}
+
+#[test]
+fn test_a_convention_child_outside_its_blocks_failed_and_a_signal_is_a_signal() {
+    let of = |code, signal| Exit::from_convention_child_status(code, signal);
+    for code in [1, 2, 15, 64, 78, 101, 126, 127, 128, 256, -1, -16, -32, -48] {
+        assert_eq!(of(Some(code), None), Exit::FAILED, "{code}");
+    }
+    assert_eq!(of(Some(143), None), Exit::signal(15), "a shell's 128+15");
+    assert_eq!(of(Some(255), None), Exit::signal(127));
+    assert_eq!(of(None, Some(15)), Exit::signal(15));
+    assert_eq!(
+        of(Some(48), Some(9)),
+        Exit::signal(9),
+        "the signal ended it"
+    );
+    assert_eq!(of(None, Some(0)), Exit::FAILED);
+    assert_eq!(of(None, None), Exit::FAILED);
 }

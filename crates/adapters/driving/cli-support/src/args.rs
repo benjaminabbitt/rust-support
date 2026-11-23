@@ -58,7 +58,7 @@ pub fn many(matches: &ArgMatches, name: &str) -> Vec<String> {
 }
 
 /// The name of the global flag that asks for the distinguishing successes
-/// (1-9) instead of 0 ([`Exit::code`](crate::Exit::code)).
+/// (16-31) instead of 0 ([`Exit::code`](crate::Exit::code)).
 pub const DETAILED_EXITCODE: &str = "detailed-exitcode";
 
 /// The global `--detailed-exitcode` flag, for a program's top command.
@@ -67,7 +67,7 @@ pub fn detailed_exitcode_arg() -> Arg {
         .long(DETAILED_EXITCODE)
         .action(ArgAction::SetTrue)
         .global(true)
-        .help("Exit 1-9 for a success that says more (1: would change something); without it every success exits 0")
+        .help("Exit 16-31 for a success that says more (16: would change something); without it every success exits 0")
 }
 
 /// Whether the line asked for `--detailed-exitcode`, read at any depth.

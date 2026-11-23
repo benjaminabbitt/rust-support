@@ -71,3 +71,22 @@ fn test_the_detailed_exitcode_flag_is_global_and_off_unless_given() {
     let none = Command::new("other").get_matches_from(["other"]);
     assert!(!crate::detailed_exitcode(&none), "a line without the flag");
 }
+
+#[test]
+fn test_the_flag_help_names_the_success_block_and_would_change_code() {
+    let help = crate::detailed_exitcode_arg()
+        .get_help()
+        .expect("the flag has help")
+        .to_string();
+    assert!(help.contains("16-31"), "{help}");
+    assert!(
+        help.contains(&format!("{}: would change", Exit::WOULD_CHANGE.code(true))),
+        "{help}"
+    );
+}
+
+#[test]
+fn test_a_usage_error_ends_with_the_refused_status_not_the_parsers_two() {
+    let usage = Command::new("demo").error(ErrorKind::UnknownArgument, "no such flag");
+    assert_eq!(usage_exit(&usage).code(false), 48);
+}
