@@ -54,6 +54,10 @@ impl Exit {
     pub const WOULD_CHANGE: Exit = Exit(17);
     /// 32: the command tried and something broke.
     pub const FAILED: Exit = Exit(32);
+    /// 47: the command tried and broke, and retrying will not help: a bug,
+    /// damage or a misconfiguration; an operator must act. The top of the
+    /// failure block, so it outranks every other failure.
+    pub const BROKEN: Exit = Exit(47);
     /// 48: the request or the state forbids it (a usage error too).
     pub const REFUSED: Exit = Exit(48);
     /// 49: the input was examined and cannot produce a working result.

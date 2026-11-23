@@ -98,6 +98,26 @@ fn test_with_the_flag_every_success_and_only_a_success_has_high_nibble_one() {
 }
 
 #[test]
+fn test_broken_is_the_failure_forty_seven_with_or_without_the_flag() {
+    assert_eq!(Exit::BROKEN, Exit::failed(47));
+    assert_eq!(Exit::BROKEN.class(), Class::Failed);
+    assert_eq!(Exit::BROKEN.code(false), 47);
+    assert_eq!(Exit::BROKEN.code(true), 47);
+}
+
+// Broken (an operator must act) outranks every other failure, transient
+// ones included, and is outranked by every decline.
+#[test]
+fn test_broken_outranks_every_other_failure_and_no_decline() {
+    for code in 32..=46 {
+        let other = Exit::failed(code);
+        assert_eq!(other.worst(Exit::BROKEN), Exit::BROKEN, "{code}");
+        assert_eq!(Exit::BROKEN.worst(other), Exit::BROKEN, "{code}");
+    }
+    assert_eq!(Exit::BROKEN.worst(Exit::REFUSED), Exit::REFUSED);
+}
+
+#[test]
 fn test_each_defined_code_is_of_its_class() {
     assert_eq!(Exit::OK.class(), Class::Success);
     assert_eq!(Exit::DETAILED_OK.class(), Class::Success);

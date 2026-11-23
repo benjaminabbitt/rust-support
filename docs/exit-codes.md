@@ -76,6 +76,7 @@ lose information.
 | 16   | detailed ok      | success | ok, as reported under `--detailed-exitcode` (0 without the flag)                       |
 | 17   | would change     | success | a dry run or preview succeeded and applying it would change something (0 without the flag) |
 | 32   | failed           | failure | the command tried and something broke: I/O, a store, a child program, the network     |
+| 47   | broken           | failure | the command tried and broke, and retrying will not help: a bug, damage or a misconfiguration; an operator must act |
 | 48   | refused          | decline | the request or the state forbids it: a bad argument, a usage error, a taken name, unreadable configuration |
 | 49   | fatal findings   | decline | the command examined its input and found it cannot produce a working result            |
 | 128+n| signal n         | signal  | the command was asked to stop by signal `n` and did                                    |
@@ -89,7 +90,10 @@ What belongs where:
 - **Failure (32-47).** The command made an honest attempt and the attempt
   broke for a reason outside the request: a file could not be written, a
   database was locked, a child process crashed, a remote could not be
-  reached. Trying again later, unchanged, may succeed.
+  reached. Trying again later, unchanged, may succeed, except for broken
+  (47): a bug, damage or a misconfiguration, which no retry fixes and an
+  operator must act on. Broken is the top of the block, so it outranks any
+  transient failure.
 - **Decline (48-63).** The command decided not to act, before or instead of
   acting: the request is malformed (a usage error from the argument parser
   is a decline, 48, not the parser's own exit status), the state forbids it
@@ -228,7 +232,7 @@ as one of this convention's codes.
 
 1. Decide its class first: did the command succeed, try and break, or
    decline? The class is the block; it is what every existing caller reads.
-2. Take the next free code in that block: success 18-31, failure 33-47,
+2. Take the next free code in that block: success 18-31, failure 33-46,
    decline 50-63. Never reuse a code that was published with another
    meaning.
 3. A new success subcode is returned only under `--detailed-exitcode`, like
@@ -274,7 +278,7 @@ command-line edge) the convention is the type `Exit` (and its `Class`):
 constructors for each block that refuse a code outside it
 (`Exit::success`, `Exit::failed`, `Exit::declined`, `Exit::signal`),
 the defined codes as constants (`Exit::OK`, `Exit::DETAILED_OK`, `Exit::WOULD_CHANGE`,
-`Exit::FAILED`, `Exit::REFUSED`, `Exit::FATAL_FINDINGS`), `Exit::code`, the
+`Exit::FAILED`, `Exit::BROKEN`, `Exit::REFUSED`, `Exit::FATAL_FINDINGS`), `Exit::code`, the
 single function that turns an exit and the `--detailed-exitcode` flag into
 the process's status and holds the collapse rule (and reports `OK` as
 `DETAILED_OK`'s 16 under the flag), `ExitStatuses`, the flag bound once
