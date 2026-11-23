@@ -34,8 +34,10 @@ impl FromStr for Asked {
     type Err = UnknownFormat;
 
     fn from_str(value: &str) -> Result<Asked, UnknownFormat> {
-        let _ = value;
-        todo!()
+        match value {
+            "yaml" => Ok(Asked::Yaml),
+            other => other.parse().map(Asked::Format),
+        }
     }
 }
 
@@ -50,8 +52,7 @@ pub struct Version<'a> {
 }
 
 fn is_zero(n: &u32) -> bool {
-    let _ = n;
-    todo!()
+    *n == 0
 }
 
 impl Render for Version<'_> {
@@ -61,8 +62,7 @@ impl Render for Version<'_> {
 
     /// The bare version, on its own line.
     fn text(&self, out: &mut dyn Write) -> std::io::Result<()> {
-        let _ = out;
-        todo!()
+        writeln!(out, "{}", self.version)
     }
 }
 
@@ -74,8 +74,22 @@ pub fn loadout(
     document: &str,
     out: &mut dyn Write,
 ) -> Result<(), LoadoutError> {
-    let _ = (asked, document, out);
-    todo!()
+    if let Some(Asked::Format(format)) = asked {
+        return Err(LoadoutError::Format {
+            format: format_name(format).to_string(),
+        });
+    }
+    out.write_all(document.as_bytes())
+        .map_err(|e| LoadoutError::Output {
+            detail: e.to_string(),
+        })
+}
+
+fn format_name(format: Format) -> &'static str {
+    match format {
+        Format::Text => "text",
+        Format::Json => "json",
+    }
 }
 
 #[cfg(test)]

@@ -54,7 +54,10 @@ impl Diagnostic for LoadoutError {
 impl ExitClass for LoadoutError {
     /// A format refused is a usage error (refused); a write that broke failed.
     fn exit(&self) -> Exit {
-        todo!()
+        match self {
+            LoadoutError::Format { .. } => Exit::REFUSED,
+            LoadoutError::Output { .. } => Exit::FAILED,
+        }
     }
 }
 

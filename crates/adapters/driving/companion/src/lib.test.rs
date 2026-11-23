@@ -86,18 +86,17 @@ fn test_version_json_is_name_version_lock_protocol_in_order() {
         lock_protocol: 2,
     };
 
-    let json: serde_json::Value = serde_json::from_str(&rendered(Format::Json, &v)).expect("json");
+    let raw = rendered(Format::Json, &v);
+    let json: serde_json::Value = serde_json::from_str(&raw).expect("json");
 
     assert_eq!(
         json,
         serde_json::json!({"name": "demo", "version": "1.2.3", "lock_protocol": 2})
     );
-    let keys: Vec<&str> = json
-        .as_object()
-        .expect("object")
-        .keys()
-        .map(String::as_str)
-        .collect();
+    // serde_json's Value sorts keys, so the order is read from the raw text.
+    let at = |key: &str| raw.find(&format!("\"{key}\"")).expect(key);
+    let mut keys = ["name", "version", "lock_protocol"];
+    keys.sort_by_key(|k| at(k));
     assert_eq!(keys, ["name", "version", "lock_protocol"]);
 }
 
