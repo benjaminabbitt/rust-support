@@ -1,0 +1,31 @@
+[package]
+name = "diagnostic"
+version = "0.1.0"
+description = "Localizable errors: a stable code and named data on every error, rendered where it is shown, from a Fluent catalog keyed by the code"
+edition.workspace = true
+# Lower than the workspace's: std alone, for the runtimes built on it.
+rust-version = "1.77"
+license.workspace = true
+publish.workspace = true
+
+# Deliberately zero dependencies, and nothing from any program that uses it:
+# it builds for wasm32-unknown-unknown (`just check-wasm-diagnostic`).
+[dependencies]
+
+[features]
+# `build::catalogs`, for a build script: a crate's catalog sources, their
+# ids suffixes, written to OUT_DIR under the crate's name. std alone.
+build = []
+
+[dev-dependencies]
+# Fluent's own parser and serializer hold `catalog::prefixed` to the
+# grammar (the presentation crate's renderer already depends on it).
+fluent-syntax.workspace = true
+# The build tests' scratch directories (std alone).
+test-dir.workspace = true
+# Itself with `build`, so this crate's own tests build and run the build
+# helper's (a workspace test turns on no feature).
+diagnostic = { path = ".", features = ["build"] }
+
+[lints]
+workspace = true

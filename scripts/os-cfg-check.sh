@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# What differs between operating systems lives in angzarr's os crate
-# alone. Fail on a cfg (or cfg_attr) naming an OS, `cfg!(`, `std::os::` or
-# `split_paths` anywhere under crates/, tests included, and on a crate with
-# target-specific dependencies. The exceptions (the seam) are the allowlist,
+# What differs between operating systems lives in the os crate alone
+# (rust-support's crates/adapters/driven/os: the seam, exempt whole, its
+# sources and its manifest). Fail on a cfg (or cfg_attr) naming an OS,
+# `cfg!(`, `std::os::` or `split_paths` anywhere else under crates/, tests
+# included, and on any other crate with target-specific dependencies. The exceptions (the seam) are the allowlist,
 # scripts/os-cfg-allow.txt (one per line: `<file> | <text on the line> |
 # <why>`), so each carries its reason and a new one is seen in review; an
 # entry that no longer matches anything fails too, so the list stays true.
@@ -12,6 +13,9 @@ set -euo pipefail
 top=${1:-$(git rev-parse --show-toplevel)}
 cd "$top"
 allow_file=scripts/os-cfg-allow.txt
+# The os crate's directory, where a consumer has none: nothing under it is
+# checked.
+seam=crates/adapters/driven/os/
 pattern='cfg(_attr)?\((all\(|any\(|not\()*[^)]*\b(unix|windows|target_os|target_family)\b|cfg!\(|std::os::|split_paths'
 
 files=() fragments=()
@@ -36,6 +40,7 @@ found=0
 if [ -d crates ]; then
   while IFS= read -r hit; do
     file=${hit%%:*}
+    [[ $file == "$seam"* ]] && continue
     rest=${hit#*:}
     line=${rest#*:}
     allowed=0
@@ -52,9 +57,10 @@ if [ -d crates ]; then
   # A manifest at any depth (crates/<ring>/<role>/<crate>/Cargo.toml, or the
   # core's nesting).
   while IFS= read -r hit; do
+    [[ $hit == "$seam"* ]] && continue
     echo "$hit"
     found=$((found + 1))
-  done < <(find crates -name Cargo.toml -not -path '*/target/*' -print0 | xargs -0 -r grep -nE '^\[target\.' || true)
+  done < <(find crates -name Cargo.toml -not -path '*/target/*' -print0 | xargs -0 -r grep -HnE '^\[target\.' || true)
 fi
 
 stale=0
@@ -66,7 +72,7 @@ for i in "${!files[@]}"; do
 done
 
 if [ "$found" -gt 0 ]; then
-  echo "FAIL lint-os: $found OS-specific lines: move them onto angzarr's os crate (its Flavor or Os), or list an allowed one in $allow_file with why" >&2
+  echo "FAIL lint-os: $found OS-specific lines: move them onto the os crate (its Flavor or Os), or list an allowed one in $allow_file with why" >&2
   exit 1
 fi
 if [ "$stale" -gt 0 ]; then

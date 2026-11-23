@@ -1,5 +1,5 @@
 # Messages for the crate's errors. Each id is an error's code without the
-# crate's name, which the build prefixes (angzarr_diagnostic::build); the
+# crate's name, which the build prefixes (diagnostic::build); the
 # variables are its args.
 
 empty = no span given: write a number and a unit, such as 90m, 1h30m or 1.5d, or a date such as 2026-01-01

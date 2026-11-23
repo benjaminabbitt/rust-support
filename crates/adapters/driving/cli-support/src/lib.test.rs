@@ -3,9 +3,9 @@
 
 use std::fmt;
 
-use angzarr_diagnostic::{Arg, Diagnostic};
-use angzarr_presentation::{Catalog, Format};
 use clap::{Arg as ClapArg, ArgAction, Command};
+use diagnostic::{Arg, Diagnostic};
+use presentation::{Catalog, Format};
 
 use super::*;
 
@@ -15,7 +15,7 @@ struct Note(&'static str, &'static str);
 
 impl fmt::Display for Note {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        angzarr_diagnostic::display(self, f)
+        diagnostic::display(self, f)
     }
 }
 
@@ -183,7 +183,7 @@ struct Plain;
 
 impl fmt::Display for Plain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        angzarr_diagnostic::display(self, f)
+        diagnostic::display(self, f)
     }
 }
 
@@ -259,7 +259,7 @@ fn test_a_warning_under_json_is_exactly_the_envelope_the_catalog_writes() {
     let said = String::from_utf8(err).expect("utf-8");
     let envelope = catalog().envelope(&Note("it broke", ""));
     let mut expected = Vec::new();
-    angzarr_presentation::write_json(&mut expected, &envelope).expect("written");
+    presentation::write_json(&mut expected, &envelope).expect("written");
     assert_eq!(said.as_bytes(), expected.as_slice());
     assert!(said.ends_with('\n'), "{said:?}");
     assert!(said.matches('\n').count() > 1, "pretty printed: {said:?}");
@@ -511,7 +511,7 @@ fn test_a_failure_without_refusals_is_its_envelope_and_fix_alone() {
         "demo: it broke\n  fix: mend it\n"
     );
     let mut alone = Vec::new();
-    angzarr_presentation::write_json(
+    presentation::write_json(
         &mut alone,
         &Reported::of(&both_catalog(), &Note("it broke", "mend it")),
     )

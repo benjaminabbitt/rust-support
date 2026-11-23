@@ -2,4 +2,19 @@
 # line under crates/ or templates/ that uses a consumer's word for another
 # meaning. One per line:
 #   <file> | <text on the line> | <why>
-# None today.
+
+crates/adapters/driven/os/src/process.rs | session | the POSIX session (setsid) a process tree runs in
+crates/adapters/driven/os/src/process.test.rs | session | the POSIX session (setsid) a process tree runs in
+crates/adapters/driven/os/src/detach.rs | session | the POSIX session (setsid) a detached process leaves
+crates/adapters/driven/os/src/detach.test.rs | session | the POSIX session (setsid) a detached process leads
+crates/adapters/driven/os/src/detach.test.rs | taskkill | Windows' taskkill command
+crates/adapters/driven/os/src/host.rs | session | the POSIX session (setsid) a detached process leads
+crates/adapters/driven/os/src/host/unix.rs | session | the POSIX session (setsid) a detached process leads
+crates/adapters/driven/os/src/host/unix.rs | std::task | Rust's std::task (futures' polling)
+crates/adapters/driven/os/src/host/windows.rs | std::task | Rust's std::task (futures' polling)
+crates/adapters/driven/os/src/signal.rs | std::task | Rust's std::task (futures' polling)
+crates/adapters/driven/os/src/signal.test.rs | std::task | Rust's std::task (futures' polling)
+crates/adapters/driven/os/src/lib.test.rs | std::task | Rust's std::task (futures' polling)
+crates/adapters/driving/presentation/Cargo.toml | fluent-bundle | Fluent's runtime crate, fluent-bundle
+crates/adapters/driving/presentation/src/catalog.rs | bundle | a Fluent bundle (fluent_bundle::FluentBundle), Fluent's own term
+crates/adapters/driving/presentation/src/english.rs | bundle | a Fluent bundle (fluent_bundle::FluentBundle), Fluent's own term

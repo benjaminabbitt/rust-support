@@ -3,7 +3,7 @@
 use std::fmt;
 use std::io;
 
-use angzarr_diagnostic::{code, Arg, Diagnostic};
+use diagnostic::{code, Arg, Diagnostic};
 
 /// This crate's en-US messages, its name first.
 pub const EN_US: (&str, &str) = (
@@ -71,7 +71,7 @@ impl RunError {
 
 impl fmt::Display for RunError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        angzarr_diagnostic::display(self, f)
+        diagnostic::display(self, f)
     }
 }
 

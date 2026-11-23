@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use angzarr_diagnostic::{code, Arg, Diagnostic};
+use diagnostic::{code, Arg, Diagnostic};
 
 /// Why a text is not a span (or, for [`cutoff`](crate::cutoff), a date).
 /// Each variant has its own code and carries the text it refused.
@@ -41,7 +41,7 @@ pub enum DurationError {
 
 impl fmt::Display for DurationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        angzarr_diagnostic::display(self, f)
+        diagnostic::display(self, f)
     }
 }
 

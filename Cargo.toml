@@ -4,32 +4,18 @@ members = ["crates/*/*/*"]
 
 [workspace.package]
 edition = "2021"
-# The newest any dependency needs (angzarr-build in the consumers); a lower
-# claim would be false for CI. ctxloom-rs, which declares 1.85, re-checks its
-# own claim when it first links this repository.
+# The newest any crate here needs (os and file-system); a lower claim would
+# be false for CI. diagnostic, presentation and test-dir claim their own,
+# lower one, which the runtimes built on them hold. A consumer declaring an
+# older one re-checks its claim when it first links this repository.
 rust-version = "1.96"
 license = "Apache-2.0 OR BSD-3-Clause"
 publish = false
 
 [workspace.dependencies]
-# The angzarr crates are pinned to the SAME commit as the consumers
-# (taskloom, ctxloom, cherenkov, angzarr-cli) pin them, so a consumer's lock
-# holds one angzarr: a bump lands here first, then in each consumer, each
-# green. Full commits, never a branch. All of them are crates of the one
-# angzarr workspace (github.com/angzarr-io/angzarr).
-angzarr-diagnostic = { git = "https://github.com/angzarr-io/angzarr", rev = "71b453a4c0ee43bf9de3659f1a9339c110f6ae59" }
-angzarr-yaml = { git = "https://github.com/angzarr-io/angzarr", rev = "71b453a4c0ee43bf9de3659f1a9339c110f6ae59" }
-angzarr-presentation = { git = "https://github.com/angzarr-io/angzarr", rev = "71b453a4c0ee43bf9de3659f1a9339c110f6ae59" }
-# The OS seam and the filesystem seam over it.
-os = { git = "https://github.com/angzarr-io/angzarr", rev = "71b453a4c0ee43bf9de3659f1a9339c110f6ae59" }
-file-system = { git = "https://github.com/angzarr-io/angzarr", rev = "71b453a4c0ee43bf9de3659f1a9339c110f6ae59" }
-# The in-app runtime (its `sqlite` feature re-exports the SQLite store).
-angzarr-embedded = { git = "https://github.com/angzarr-io/angzarr", rev = "71b453a4c0ee43bf9de3659f1a9339c110f6ae59" }
-
 # This repository's own crates.
 cli-support = { path = "crates/adapters/driving/cli-support" }
 config-layers = { path = "crates/adapters/driven/config-layers" }
-sqlite-store-opener = { path = "crates/adapters/driven/sqlite-store-opener" }
 process-env = { path = "crates/root/lib/process-env" }
 project-dir = { path = "crates/adapters/driven/project-dir" }
 run-within = { path = "crates/adapters/driven/run-within" }
@@ -37,18 +23,50 @@ fixture-program = { path = "crates/adapters/driven/fixture-program" }
 duration-text = { path = "crates/core/domain/duration-text" }
 exit-code = { path = "crates/core/domain/exit-code" }
 arch-lint = { path = "crates/root/bin/arch-lint" }
+# The platform seams: what differs between operating systems, and the
+# filesystem seam over it; advisory file locks through both.
+os = { path = "crates/adapters/driven/os" }
+file-system = { path = "crates/adapters/driven/file-system" }
+file-lock = { path = "crates/adapters/driven/file-lock" }
+# Localizable errors (pure), and their rendering at the driving edge.
+diagnostic = { path = "crates/core/domain/diagnostic" }
+presentation = { path = "crates/adapters/driving/presentation" }
+# A test's scratch directory, for a crate below the file-system seam.
+test-dir = { path = "crates/adapters/driven/test-dir" }
 
 # The command-line parser and the serializer the CLI shims read and write with.
 clap = "4.5"
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 
 # The dependency graph as cargo reports it (arch-lint), and the rules file it
 # reads.
 cargo_metadata = "0.23"
 toml = { version = "1", default-features = false, features = ["std", "parse", "serde"] }
 
-# The runtime the store's tests run its async opens on.
+# The runtime the os crate's signals are made on.
 tokio = { version = "1", features = ["rt", "time"] }
+
+# The os crate's host: advisory locks, the other flavor's paths, the
+# process tree kill, and the per-OS syscalls.
+fs4 = "1.1"
+typed-path = "=0.12.3"
+process-wrap = { version = "=10.0.1", default-features = false, features = ["std", "process-group"] }
+libc = "0.2"
+junction = "=2.1.0"
+same-file = "=1.0.6"
+windows-sys = "=0.61.2"
+# The file-system seam's staged writes and temporary roots.
+tempfile = "3"
+
+# Fluent, the catalogs' format: its parser (the catalog checks), its
+# runtime and language negotiation (presentation's renderer).
+fluent-syntax = "0.11.1"
+fluent-bundle = "0.15.3"
+fluent-langneg = "0.13.1"
+unic-langid = "0.9.6"
+# The JSON format, and display-width columns in text output.
+serde_json = "1.0.149"
+unicode-width = "0.2.2"
 
 # `#[mutants::skip]`, for a mutant judged equivalent.
 mutants = "0.0.4"

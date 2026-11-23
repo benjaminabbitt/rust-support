@@ -16,15 +16,5 @@
 # The consumers (ctxloom-rs, taskloom) reach THIS repository the same way: their
 # own .cargo/local-deps.toml patches
 # "https://github.com/benjaminabbitt/rust-support" onto ../rust-support.
-
-# angzarr is one workspace (github.com/angzarr-io/angzarr); co-developing it
-# means patching its crates from the checkout, e.g. (paths relative to this
-# checkout's root; `just dev::local` writes this from the registry):
 #
-#   [patch."https://github.com/angzarr-io/angzarr"]
-#   os = { path = "../angzarr/crates/os" }
-#   file-system = { path = "../angzarr/crates/file-system" }
-#   angzarr-diagnostic = { path = "../angzarr/crates/angzarr-diagnostic" }
-#   angzarr-yaml = { path = "../angzarr/crates/angzarr-yaml" }
-#   angzarr-presentation = { path = "../angzarr/crates/angzarr-presentation" }
-#   angzarr-embedded = { path = "../angzarr/crates/angzarr-embedded" }
+# This workspace has no git dependency today, so there is nothing to patch.

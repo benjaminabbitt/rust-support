@@ -4,8 +4,8 @@
 use std::fmt;
 use std::io::Write;
 
-use angzarr_diagnostic::{Arg, Diagnostic};
-use angzarr_presentation::{write_json, write_json_line, Catalog, Format};
+use diagnostic::{Arg, Diagnostic};
+use presentation::{write_json, write_json_line, Catalog, Format};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -30,7 +30,7 @@ impl fmt::Debug for FixOf<'_> {
 
 impl fmt::Display for FixOf<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        angzarr_diagnostic::display(self, f)
+        diagnostic::display(self, f)
     }
 }
 

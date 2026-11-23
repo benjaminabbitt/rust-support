@@ -1,4 +1,6 @@
 # The allowed exceptions to `just lint-os` (scripts/os-cfg-check.sh): code
 # in this workspace that names an OS. One per line:
 #   <file> | <text on the line> | <why>
-# Keep it short: an exception is code the os crate cannot hold. None today.
+# The os crate (crates/adapters/driven/os) is the seam and is not checked,
+# so it needs no entry here. Keep it short: an exception is code the os
+# crate cannot hold. None today.

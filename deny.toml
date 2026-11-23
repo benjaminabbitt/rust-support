@@ -4,18 +4,7 @@
 version = 2
 # RustSec advisories. An ignore needs the advisory id and why it does not
 # apply here.
-ignore = [
-  # RUSTSEC-2026-0459: the bundled SQLite (libsqlite3-sys 0.30.1, reached through
-  # sqlx 0.8's bundled sqlite feature in angzarr's `angzarr-store-sqlite`) can
-  # return uninitialized page-cache memory when a process opens a database beside a
-  # `-wal` file of a different page size. Exposed only to a database and -wal that a
-  # less trusted party could have written; ours live in the user's own ~/.ctxloom.
-  # sqlx-sqlite 0.8.6 requires libsqlite3-sys ^0.30.1, and sqlx 0.9.0 requires
-  # <0.38, so no released sqlx admits the fixed 0.39: a lock-only fix is impossible.
-  # Revisit when a sqlx release admits libsqlite3-sys >= 0.39.0 (or the store pins
-  # sqlx's main by rev); delete this entry then.
-  { id = "RUSTSEC-2026-0459", reason = "bundled SQLite via angzarr's store; databases are the user's own; upstream bump pending" },
-]
+ignore = []
 
 [licenses]
 version = 2
@@ -29,36 +18,9 @@ allow = [
 ]
 confidence-threshold = 0.9
 
-# angzarr's shared runtime crates are AGPL-3.0-only with the angzarr runtime
-# exception (its LICENSE-EXCEPTION), which frees an application that links
-# them. Each is allowed by name; no other copyleft is.
-[[licenses.exceptions]]
-crate = "angzarr-bus"
-allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
-
-[[licenses.exceptions]]
-crate = "angzarr-diagnostic"
-allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
-
-[[licenses.exceptions]]
-crate = "angzarr-embedded"
-allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
-
-[[licenses.exceptions]]
-crate = "angzarr-ports"
-allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
-
-[[licenses.exceptions]]
-crate = "angzarr-presentation"
-allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
-
-[[licenses.exceptions]]
-crate = "angzarr-yaml"
-allow = ["AGPL-3.0-only WITH AdditionRef-angzarr-runtime-exception"]
-
 [licenses.private]
-# Not ignored: the git dependencies (angzarr-proto) are `publish = false`
-# too, and their licenses are exactly what must be checked.
+# Not ignored: this workspace's own crates are `publish = false`, and their
+# licenses are checked like any other's.
 ignore = false
 
 [bans]
@@ -71,7 +33,5 @@ allow-wildcard-paths = true
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = [
-  # angzarr: core, the OS and filesystem seams, the in-app runtime.
-  "https://github.com/angzarr-io/angzarr",
-]
+# No git dependency: every crate outside this workspace is from crates.io.
+allow-git = []

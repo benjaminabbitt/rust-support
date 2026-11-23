@@ -2,9 +2,9 @@
 
 use std::io::{self, Write};
 
-use angzarr_diagnostic::Diagnostic;
-use angzarr_presentation::{Catalog, Format};
 use clap::ArgMatches;
+use diagnostic::Diagnostic;
+use presentation::{Catalog, Format};
 
 use crate::{Exit, ExitClass};
 

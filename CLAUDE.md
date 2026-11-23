@@ -1,7 +1,8 @@
 # Introduction
 
 rust-support is the shared substrate of ctxloom's Rust applications (taskloom,
-ctxloom-rs): the pieces both need and angzarr must not know. It is the Rust
+ctxloom-rs) and of angzarr: the pieces more than one of them needs. angzarr
+depends on this repository, never the other way. It is the Rust
 successor to the archived Go `ctxloom/shared`. It is engine- and
 tool-agnostic and public; nothing here is private to one application.
 
@@ -49,8 +50,12 @@ Every crate lives at `crates/<ring>/<role>/<crate>`. The ring and role are
 the architecture; there is no other table of crates. This repository is
 adapters, root helpers and a little pure core, so far:
 
-- `adapters/driven`: port implementations over the filesystem, the store.
-- `adapters/driving`: the CLI edge's shims: translation only.
+- `adapters/driven`: port implementations over the filesystem and the OS,
+  and the platform seams themselves (`os`, `file-system`: the `@platform`
+  class in `arch-rules.toml`, the one other adapter a driven adapter or a
+  root helper may depend on); `test-dir`, test support below the seam.
+- `adapters/driving`: the CLI edge's shims: translation only; and
+  `presentation`, which they write through (the `@presentation` class).
 - `root/lib`: helpers for a binary's composition root.
 - `root/bin`: binaries: `arch-lint`, the architecture lint (`templates/README.md`),
   which holds this layout to `arch-rules.toml` (`just lint-arch`, part of `just
@@ -58,7 +63,9 @@ adapters, root helpers and a little pure core, so far:
 
 - `core/domain`: pure computation (no I/O, clock or environment; "now"
   arrives as an argument or a factory): `duration-text`, the grammar of a
-  span or a date as text (`now` is zero); `exit-code`, the exit-code convention as a type. The core's purity rules (`crates/core/clippy.toml`)
+  span or a date as text (`now` is zero); `exit-code`, the exit-code convention as a type;
+  `diagnostic`, localizable errors (it builds for `wasm32-unknown-unknown`:
+  `just check-wasm-diagnostic`, part of `just lint`). The core's purity rules (`crates/core/clippy.toml`)
   repeat the root's, since clippy reads the nearest `clippy.toml`; `just lint`
   checks the nesting threshold and every OS-rule entry are in it. A further
   core role (`core/ports`, ...) appears only if a crate needs it. A crate takes plain
@@ -67,14 +74,14 @@ can leak in. `templates/` is not a crate: files consumers copy.
 
 ## OS and filesystem go through the platform seams
 
-All file I/O goes through angzarr's `file-system` crate (`Fs`), and what
+All file I/O goes through the `file-system` crate (`Fs`), and what
 differs between operating systems lives in its `os` crate. `clippy.toml`
 disallows the `std::fs`, `std::path::Path` and `tempfile` methods that
 bypass it, and the `std::env` reads and writes: the environment is read once
 into `process-env`'s `EnvSnapshot`, the only allowed site. The same list is `templates/clippy-disallowed.toml`, the canonical copy
 consumers take; `just lint` refuses to run if the two disagree, and a consumer
 checks its own with `just lint-clippy-sync`. `just lint-os` (`scripts/os-cfg-check.sh`)
-keeps OS-naming cfgs out of `crates/`; the gate-kit (`templates/README.md`) says
+keeps OS-naming cfgs out of `crates/` but the `os` crate, the seam; the gate-kit (`templates/README.md`) says
 what consumers copy. Their self-tests are `scripts/*.selftest.sh`.
 
 ## A test's fake program is `fixture-program`'s, never a written executable
@@ -91,7 +98,7 @@ unless it is listed with its reason in `scripts/exec-mode-allow.txt`.
 
 ## Errors are localizable: a code, args, and an en-US message
 
-Every error implements `angzarr_diagnostic::Diagnostic` with an English
+Every error implements `diagnostic::Diagnostic` with an English
 `Display` fallback, a stable code prefixed with the crate's name, an en-US
 message in `locales/en-US/<crate>.ftl` using exactly its args, and a sample in
 the crate's `diagnostic_samples()`; the crate exports its catalog as `EN_US`
@@ -110,11 +117,10 @@ re-exports it, and a `Failure` carries an `Exit`, never a raw code.
 
 ## Pins: by full commit, one of each
 
-Every dependency outside this repository is a git dependency pinned by full
-commit (never a branch) in the workspace `Cargo.toml`. The angzarr crates are
-pinned to the SAME commit (one repository, github.com/angzarr-io/angzarr) as
-the consumers pin it, so a consumer's lock holds one angzarr. An angzarr re-pin
-lands here first, then in each consumer, each green.
+Every dependency outside this repository is from crates.io; a git
+dependency, should one come, is pinned by full commit (never a branch) in the
+workspace `Cargo.toml`. This repository depends on no consumer and on no
+angzarr crate: angzarr depends on it.
 
 The consumers pin this repository by full commit too
 (`git = "https://github.com/benjaminabbitt/rust-support", rev = "<sha>"`), all its
@@ -136,9 +142,7 @@ cli-support = { path = "../rust-support/crates/adapters/driving/cli-support" }
 
 CI, a fresh clone and the pre-commit gates never read it. A consumer
 restores its `Cargo.lock` before committing, and pins the sha of a commit
-here. This repository's own `.cargo/local-deps.toml` does the same for the
-angzarr crates (`cp .cargo/local-deps.toml .cargo/config.toml`, `rm` to turn
-it off); restore `Cargo.lock` before committing.
+here.
 
 ## Use `just`
 

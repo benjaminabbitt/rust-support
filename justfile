@@ -18,9 +18,8 @@ import 'templates/os-gates.just'
 import 'templates/fixture-gates.just'
 import 'templates/arch-gates.just'
 
-# What templates/os-gates.just takes from this justfile (sqlite-store-opener is
-# left out of check-windows: its SQLite build needs a mingw C compiler).
-windows_packages := "-p project-dir -p run-within -p process-env -p config-layers -p fixture-program"
+# What templates/os-gates.just takes from this justfile.
+windows_packages := "-p os -p file-system -p file-lock -p project-dir -p run-within -p process-env -p config-layers -p fixture-program"
 clippy_template := TOP / "templates/clippy-disallowed.toml"
 # What templates/arch-gates.just takes from this justfile.
 arch_lint := "cargo run -q -p arch-lint --"
@@ -67,7 +66,7 @@ build:
 # (templates/clippy-disallowed.toml) is the one this repository's own
 # clippy.toml applies to itself.
 [no-exit-message]
-lint: lint-vocab lint-os lint-fixtures selftest-gate-kit lint-arch
+lint: lint-vocab lint-os lint-fixtures selftest-gate-kit lint-arch check-wasm-diagnostic
     #!/usr/bin/env bash
     set -euo pipefail
     {{TOP}}/scripts/clippy-sync-check.sh --exact {{TOP}}/clippy.toml {{TOP}}/templates/clippy-disallowed.toml
@@ -87,6 +86,23 @@ lint: lint-vocab lint-os lint-fixtures selftest-gate-kit lint-arch
     [ "${VERBOSE:-}" = 1 ] && terse=()
     exec just --justfile {{TOP}}/justfile _run lint workspace cargo \
         cargo clippy "${terse[@]}" --manifest-path {{TOP}}/Cargo.toml --workspace --all-targets -- -D warnings
+
+# diagnostic stays a dependency leaf that builds for the browser: the crate
+# built for wasm32-unknown-unknown. Part of `lint`. The target is rustup's
+# (`rustup target add wasm32-unknown-unknown`); without it this fails, saying
+# so.
+[no-exit-message]
+check-wasm-diagnostic:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! rustup target list --installed 2>/dev/null | grep -qx wasm32-unknown-unknown; then
+        echo "FAIL check-wasm-diagnostic: the wasm32-unknown-unknown target is not installed: rustup target add wasm32-unknown-unknown" >&2
+        exit 1
+    fi
+    terse=(-q --message-format=short)
+    [ "${VERBOSE:-}" = 1 ] && terse=()
+    exec just --justfile {{TOP}}/justfile _run check-wasm-diagnostic diagnostic cargo \
+        cargo build "${terse[@]}" --manifest-path {{TOP}}/Cargo.toml -p diagnostic --target wasm32-unknown-unknown
 
 # The vocabulary rule: no consumer's word (task, session, bundle, plan, harp,
 # taskloom, ctxloom) in the crates' sources, catalogs, manifests or docs; its

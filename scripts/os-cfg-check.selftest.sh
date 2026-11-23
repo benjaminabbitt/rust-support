@@ -42,4 +42,15 @@ d=$(fixture deep-target-dep 'pub fn f() {}')
 mkdir -p "$d/crates/a/b/x/y"
 printf '[target.x.dependencies]\n' > "$d/crates/a/b/x/y/Cargo.toml"
 expect 1 "$d" "target-specific dependency, deeper manifest"
+# The os crate itself is the seam: its sources and its manifest name an OS.
+d=$(fixture seam 'pub fn f() {}')
+mkdir -p "$d/crates/adapters/driven/os/src"
+printf '#[cfg(unix)]\nuse std::os::unix::fs::PermissionsExt;\n' > "$d/crates/adapters/driven/os/src/lib.rs"
+printf '[target.'"'"'cfg(unix)'"'"'.dependencies]\nlibc = "0.2"\n' > "$d/crates/adapters/driven/os/Cargo.toml"
+expect 0 "$d" "the os crate, the seam"
+# A crate whose name only starts with the seam's is not the seam.
+d=$(fixture seam-sibling 'pub fn f() {}')
+mkdir -p "$d/crates/adapters/driven/os-extra/src"
+printf '#[cfg(unix)]\npub fn f() {}\n' > "$d/crates/adapters/driven/os-extra/src/lib.rs"
+expect 1 "$d" "a sibling of the os crate"
 echo "ok   lint-os selftest"

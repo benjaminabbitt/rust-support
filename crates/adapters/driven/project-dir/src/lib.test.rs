@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use angzarr_diagnostic::Diagnostic;
+use diagnostic::Diagnostic;
 use file_system::{Perms, Rooted};
 use os::Mode;
 

@@ -1,22 +1,31 @@
 # rust-support's own architecture rules (the arch-lint gate, `just lint-arch`).
-# Its crates are independent of one another so far; the table says what they
-# may come to depend on.
+# The table says what each role's crates may come to depend on.
 layout = "crates"
+
+[classes]
+# The platform seams, the driven adapters everything that touches the OS or
+# the filesystem goes through: `os` (what differs between operating
+# systems) and `file-system` (the filesystem seam over it).
+platform = ["os", "file-system"]
+# The driving edge's shared presentation crate: domain-free, what the CLI
+# shims write through.
+presentation = ["presentation"]
 
 [roles."core/domain"]
 allow = ["core/*"]
 rule = "the core depends on the core only"
 
 [roles."adapters/driven"]
-allow = ["core/*"]
-rule = "a driven adapter depends on no other adapter"
+allow = ["core/*", "@platform"]
+rule = "a driven adapter depends on no other adapter but the platform seams"
 
 [roles."adapters/driving"]
-allow = ["core/*"]
-rule = "a driving adapter depends on no other adapter"
+allow = ["core/*", "@presentation"]
+rule = "a driving adapter depends on no other adapter but the presentation crate"
 
 [roles."root/lib"]
-allow = ["core/*"]
+allow = ["core/*", "@platform"]
+rule = "a root helper depends on the core and the platform seams only"
 
 [roles."root/bin"]
 allow = ["*"]

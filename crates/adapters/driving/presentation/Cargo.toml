@@ -1,0 +1,45 @@
+[package]
+name = "presentation"
+version = "0.1.0"
+description = "Presentation at the driving edge, for any domain: JSON or UTF-8 text, diagnostics rendered from Fluent catalogs, display-width text helpers"
+edition.workspace = true
+# Lower than the workspace's: std alone, for the runtimes built on it.
+rust-version = "1.77"
+license.workspace = true
+publish.workspace = true
+
+# Domain-free: no crate of this workspace but diagnostic, the trait it
+# renders, which lib.test.rs checks.
+[dependencies]
+diagnostic.workspace = true
+# Fluent's standard runtime and its language ids: the catalogs' renderer.
+fluent-bundle.workspace = true
+unic-langid.workspace = true
+# Fluent's language negotiation, already fluent-bundle's: which of the
+# locales the catalogs offer serve a requested one, en-US last.
+fluent-langneg.workspace = true
+# The JSON format, and the error envelope.
+serde.workspace = true
+serde_json.workspace = true
+# Display-width columns in text output.
+unicode-width.workspace = true
+
+[dev-dependencies]
+# The catalog test reads this crate's catalog's messages and variables.
+fluent-syntax.workspace = true
+
+[features]
+# Test support other crates' tests share, behind their dev-dependency, and
+# in no build of a binary: `diagnostic_samples` (one value of every error
+# here, for a catalog test) and `english` (a diagnostic's en-US message
+# from catalogs, as an edge renders it, for the tests that hold a
+# diagnostic's English to an expected text).
+test-support = []
+
+# The build writes the catalog's source under the crate's name
+# (diagnostic::build): no catalog spells its crate's name.
+[build-dependencies]
+diagnostic = { workspace = true, features = ["build"] }
+
+[lints]
+workspace = true

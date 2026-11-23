@@ -66,8 +66,16 @@ fn test_the_statuses_agree_with_the_exit_for_every_exit_and_flag() {
     for exit in exits {
         for detailed in [false, true] {
             let statuses = ExitStatuses::new(detailed);
-            assert_eq!(statuses.code(exit), exit.code(detailed), "{exit:?} {detailed}");
-            assert_eq!(statuses.process(exit), exit.process(detailed), "{exit:?} {detailed}");
+            assert_eq!(
+                statuses.code(exit),
+                exit.code(detailed),
+                "{exit:?} {detailed}"
+            );
+            assert_eq!(
+                statuses.process(exit),
+                exit.process(detailed),
+                "{exit:?} {detailed}"
+            );
         }
     }
 }
@@ -132,7 +140,11 @@ fn test_a_distinguishing_success_collapses_to_zero_without_the_flag() {
     for code in SUCCESSES {
         let exit = Exit::success(code);
         assert_eq!(exit.code(false), 0, "success {code} without the flag");
-        assert_eq!(exit.code(true), code.max(16), "success {code} with the flag");
+        assert_eq!(
+            exit.code(true),
+            code.max(16),
+            "success {code} with the flag"
+        );
         assert_eq!(exit.class(), Class::Success);
     }
 }

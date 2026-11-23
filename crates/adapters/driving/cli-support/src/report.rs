@@ -2,8 +2,8 @@
 
 use std::io::{self, Write};
 
-use angzarr_diagnostic::Diagnostic;
-use angzarr_presentation::{write_json, Catalog, Envelope, Format};
+use diagnostic::Diagnostic;
+use presentation::{write_json, Catalog, Envelope, Format};
 use serde::Serialize;
 
 use crate::notices::fix_of;

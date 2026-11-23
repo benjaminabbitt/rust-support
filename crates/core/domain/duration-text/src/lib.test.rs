@@ -13,7 +13,7 @@
 use std::cell::Cell;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use angzarr_diagnostic::{Arg, Diagnostic};
+use diagnostic::{Arg, Diagnostic};
 
 use crate::{age_between, cutoff_at, parse, Comparison, DurationError, DurationText};
 
