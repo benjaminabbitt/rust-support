@@ -63,7 +63,7 @@ adapters, root helpers and a little pure core, so far:
 
 - `core/domain`: pure computation (no I/O, clock or environment; "now"
   arrives as an argument or a factory): `duration-text`, the grammar of a
-  span or a date as text (`now` is zero); `exit-code`, the exit-code convention as a type;
+  span or a date as text (`now` is zero); `exit-code`, the exit-code convention as a type; `fnv-hash`, FNV-1a 64 and 128 (a compatibility promise: these functions never change);
   `diagnostic`, localizable errors (it builds for `wasm32-unknown-unknown`:
   `just check-wasm-diagnostic`, part of `just lint`). The core's purity rules (`crates/core/clippy.toml`)
   repeat the root's, since clippy reads the nearest `clippy.toml`; `just lint`

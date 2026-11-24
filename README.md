@@ -21,6 +21,7 @@ arguments.
 | `run-within` | `crates/adapters/driven/run-within` | run a program under a deadline: its process tree killed, its output bounded, the wait for it bounded; or a long-lived program on live pipes with no deadline (`run_piped`), its tree ended through a shared handle |
 | `fixture-program` | `crates/adapters/driven/fixture-program` | test support: a fake program (a script) a test runs by path, never exec'd as written, so it cannot fail with ETXTBSY |
 | `duration-text` | `crates/core/domain/duration-text` | the grammar of a span (`1h30m`, `1.5d`) or a date as text: parse, cutoff, age and exact comparison, over std's `Duration` and `SystemTime` |
+| `fnv-hash` | `crates/core/domain/fnv-hash` | FNV-1a, 64 and 128 bit: pure, no dependency, its parameters and published vectors documented (the 128-bit rows from an independent model) |
 | `exit-code` | `crates/core/domain/exit-code` | the exit-code convention (`docs/exit-codes.md`) as a type |
 | `diagnostic` | `crates/core/domain/diagnostic` | localizable errors: a stable code and named args on every error, Fluent catalogs keyed by the code, and the build helper that embeds a crate's catalogs under its name |
 | `presentation` | `crates/adapters/driving/presentation` | presentation at the driving edge: JSON or UTF-8 text, diagnostics rendered from Fluent catalogs, display-width text |

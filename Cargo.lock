@@ -320,6 +320,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fnv-hash"
+version = "0.1.0"
+dependencies = [
+ "mutants",
+]
+
+[[package]]
 name = "fs4"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
