@@ -1,7 +1,7 @@
 [package]
 name = "duration-text"
-version = "0.1.0"
-description = "The grammar of a span written as text (1h30m, 1.5d) or a date, as an age or a cutoff"
+version = "0.2.0"
+description = "A span written as text (1h30m, 2d, now) or a date, over jiff: parsed, formatted exactly or as an age, and a cutoff"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 diagnostic.workspace = true
+jiff.workspace = true
 
 [dev-dependencies]
 mutants.workspace = true

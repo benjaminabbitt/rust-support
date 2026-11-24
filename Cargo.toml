@@ -69,6 +69,11 @@ unic-langid = "0.9.6"
 serde_json = "1.0.149"
 unicode-width = "0.2.2"
 
+# The friendly grammar and printer of a span as text (duration-text wraps
+# it). No time zone database, no serde: `std` alone, the version released at
+# least two weeks before it was taken.
+jiff = { version = "=0.2.42", default-features = false, features = ["std"] }
+
 # `#[mutants::skip]`, for a mutant judged equivalent.
 mutants = "0.0.4"
 

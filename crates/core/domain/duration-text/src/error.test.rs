@@ -14,7 +14,7 @@ fn every_code_is_under_the_crates_name_with_its_message() {
 
 #[test]
 fn every_variant_has_its_own_code() {
-    let mut codes: Vec<String> = diagnostic_samples()
+    let mut codes: Vec<String> = super::errors()
         .iter()
         .map(|d| d.code().to_string())
         .collect();
@@ -22,5 +22,5 @@ fn every_variant_has_its_own_code() {
     codes.sort();
     codes.dedup();
     assert_eq!(codes.len(), all);
-    assert_eq!(all, 11);
+    assert_eq!(all, 6);
 }
