@@ -1,5 +1,5 @@
 [package]
-name = "diagnostic"
+name = "coded-diagnostic"
 version = "0.1.0"
 description = "Localizable errors: a stable code and named data on every error, rendered where it is shown, from a Fluent catalog keyed by the code"
 edition.workspace = true
@@ -9,7 +9,7 @@ license.workspace = true
 publish.workspace = true
 
 # Deliberately zero dependencies, and nothing from any program that uses it:
-# it builds for wasm32-unknown-unknown (`just check-wasm-diagnostic`).
+# it builds for wasm32-unknown-unknown (`just check-wasm-coded-diagnostic`).
 [dependencies]
 
 [features]
@@ -25,7 +25,7 @@ fluent-syntax.workspace = true
 test-dir.workspace = true
 # Itself with `build`, so this crate's own tests build and run the build
 # helper's (a workspace test turns on no feature).
-diagnostic = { path = ".", features = ["build"] }
+coded-diagnostic = { path = ".", features = ["build"] }
 
 [lints]
 workspace = true

@@ -1,6 +1,6 @@
 //! A diagnostic as JSON.
 
-use diagnostic::{Arg, Diagnostic};
+use coded_diagnostic::{Arg, Diagnostic};
 use serde::ser::{SerializeMap, Serializer};
 use serde::Serialize;
 

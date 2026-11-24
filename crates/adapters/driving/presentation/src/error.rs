@@ -2,13 +2,13 @@
 
 use std::fmt;
 
-use diagnostic::{code, Arg, Diagnostic};
+use coded_diagnostic::{code, Arg, Diagnostic};
 
 use crate::{Locales, Source};
 
 /// This crate's en-US messages; every [`Catalog`](crate::Catalog) holds
 /// them. The text of `locales/en-US/messages.ftl`, its ids under the
-/// crate's package name (`diagnostic::build`).
+/// crate's package name (`coded_diagnostic::build`).
 pub const EN_US: Source = (
     env!("CARGO_PKG_NAME"),
     include_str!(concat!(env!("OUT_DIR"), "/en-US.ftl")),
@@ -16,7 +16,7 @@ pub const EN_US: Source = (
 
 /// This crate's catalogs by locale, under the same name: every
 /// `locales/<locale>/messages.ftl`, from the table the build writes
-/// (`diagnostic::build`), so a locale added there is offered with no
+/// (`coded_diagnostic::build`), so a locale added there is offered with no
 /// other edit. en-US alone ships.
 pub const LOCALES: Locales = (
     env!("CARGO_PKG_NAME"),
@@ -49,19 +49,19 @@ pub enum Unrendered {
 
 impl fmt::Display for UnknownFormat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 
 impl fmt::Display for CatalogError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 
 impl fmt::Display for Unrendered {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 

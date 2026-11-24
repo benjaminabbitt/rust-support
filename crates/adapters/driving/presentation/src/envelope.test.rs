@@ -1,7 +1,7 @@
 //! A diagnostic's JSON.
 
 use crate::Catalog;
-use diagnostic::{Arg, Report};
+use coded_diagnostic::{Arg, Report};
 
 const DEMO: crate::Source = (
     "demo",

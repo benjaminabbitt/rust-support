@@ -5,7 +5,7 @@
 //! mark), removed with it.
 //!
 //! For a crate below the file-system seam, whose tests cannot take a
-//! `Rooted` (`diagnostic`'s, whose build helper writes real files), taken as
+//! `Rooted` (`coded-diagnostic`'s, whose build helper writes real files), taken as
 //! a dev-dependency only:
 //!
 //! - A directory is `<base>/<prefix>-<pid>-<n>`, `n` counting within the
@@ -21,7 +21,7 @@
 //!   panics then keeps the directory and names it on stderr. A passing
 //!   test's directory goes either way.
 
-// Test support below the file-system seam: diagnostic, which file-system
+// Test support below the file-system seam: coded-diagnostic, which file-system
 // depends on, takes it as a dev-dependency, so it calls std::fs on the
 // temporary directory and reads TEST_DIR_KEEP itself.
 #![allow(

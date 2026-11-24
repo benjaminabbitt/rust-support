@@ -1,6 +1,6 @@
 //! Messages from catalogs, and the code and args when there is none.
 
-use diagnostic::Report;
+use coded_diagnostic::Report;
 
 use super::Catalog;
 use crate::{locale, LanguageIdentifier, Locales, Unrendered};
@@ -32,7 +32,7 @@ fn test_a_message_is_the_catalogs_filled_from_the_args_without_isolation_marks()
 fn test_a_nested_cause_is_rendered_from_the_catalog_too() {
     let gave_up = Report::new("demo-gave-up")
         .arg("attempts", 10u32)
-        .arg("error", diagnostic::Arg::nested(&busy()));
+        .arg("error", coded_diagnostic::Arg::nested(&busy()));
     assert_eq!(
         catalog().message(&gave_up),
         "gave up after 10 attempts: the store /db is busy"
@@ -40,7 +40,7 @@ fn test_a_nested_cause_is_rendered_from_the_catalog_too() {
 }
 
 // No English crosses. A diagnostic no catalog has a message for is shown
-// as its key and args (as diagnostic's `display` writes it), never English: a
+// as its key and args (as coded-diagnostic's `display` writes it), never English: a
 // text value is quoted where it would not parse back, a nested cause is
 // its code under the arg's name and its own args under `<name>.`.
 
@@ -48,7 +48,7 @@ fn test_a_nested_cause_is_rendered_from_the_catalog_too() {
 fn test_a_nested_cause_no_catalog_has_is_its_code_and_args() {
     let gave_up = Report::new("demo-gave-up").arg("attempts", 10u32).arg(
         "error",
-        diagnostic::Arg::nested(
+        coded_diagnostic::Arg::nested(
             &Report::new("demo-store-unavailable")
                 .arg("errno", 10u64)
                 .arg("ext_err_txt", "disk I/O error"),
@@ -83,7 +83,7 @@ fn test_an_unknown_codes_message_is_its_code_and_args_ambiguous_values_quoted() 
         .arg("empty", "")
         .arg("said", r#"a "b" \ c=d"#)
         .arg("n", -3i64)
-        .arg("cause", diagnostic::Arg::nested(&inner));
+        .arg("cause", coded_diagnostic::Arg::nested(&inner));
     assert_eq!(
         catalog().message(&unknown),
         r#"demo-nothing path=/db empty="" said="a \"b\" \\ c=d" n=-3 cause=demo-inner cause.path="/a b""#
@@ -103,7 +103,7 @@ fn test_a_missing_arg_is_unformattable_and_its_message_is_its_code_and_args() {
     assert_eq!(catalog().message(&bare), "demo-busy");
 }
 
-fn events(n: impl Into<diagnostic::Arg>) -> String {
+fn events(n: impl Into<coded_diagnostic::Arg>) -> String {
     let report = Report::new("demo-events").arg("n", n);
     catalog().render(&report).unwrap()
 }
@@ -178,7 +178,7 @@ fn test_a_locales_message_is_its_own_and_the_rest_fall_back_to_en_us() {
     );
     let gave_up = Report::new("demo-gave-up")
         .arg("attempts", 10u32)
-        .arg("error", diagnostic::Arg::nested(&busy()));
+        .arg("error", coded_diagnostic::Arg::nested(&busy()));
     assert_eq!(
         german.message(&gave_up),
         "gave up after 10 attempts: der Speicher /db ist belegt",
@@ -219,7 +219,7 @@ fn test_en_us_is_the_same_as_asking_for_en_us() {
     let asked = Catalog::for_locale(&locale::fallback(), &[DEMO_LOCALES]).unwrap();
     let gave_up = Report::new("demo-gave-up")
         .arg("attempts", 1u32)
-        .arg("error", diagnostic::Arg::nested(&busy()));
+        .arg("error", coded_diagnostic::Arg::nested(&busy()));
     let mut samples = crate::diagnostic_samples();
     for report in [
         busy(),

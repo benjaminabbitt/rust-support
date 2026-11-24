@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use diagnostic::{code, Arg, Diagnostic};
+use coded_diagnostic::{code, Arg, Diagnostic};
 
 /// Why a text is not a span (or, for [`cutoff_at`](crate::cutoff_at), a
 /// date). Each variant has its own code and carries the text it refused;
@@ -40,7 +40,7 @@ impl DurationError {
 
 impl fmt::Display for DurationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 
@@ -86,7 +86,7 @@ struct FixOf(String);
 #[cfg(any(test, feature = "test-support"))]
 impl fmt::Display for FixOf {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 

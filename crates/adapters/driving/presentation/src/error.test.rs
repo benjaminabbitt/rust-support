@@ -1,6 +1,6 @@
 //! The errors' English, and the catalog.
 
-use diagnostic::Diagnostic;
+use coded_diagnostic::Diagnostic;
 
 crate::english_for!(&[crate::EN_US.1]);
 
@@ -56,7 +56,7 @@ fn test_every_error_has_a_catalog_message_with_exactly_its_args() {
         // Display is the key and args, never English.
         assert_eq!(
             sample.to_string(),
-            diagnostic::Report::of(&*sample).to_string(),
+            coded_diagnostic::Report::of(&*sample).to_string(),
             "{}",
             sample.code()
         );
@@ -93,7 +93,7 @@ fn test_every_code_is_under_the_crates_name_with_its_message() {
     let (name, text) = crate::EN_US;
     assert_eq!(name, env!("CARGO_PKG_NAME"));
     assert_eq!(
-        diagnostic::catalog::check(name, text, &diagnostic_samples()),
+        coded_diagnostic::catalog::check(name, text, &diagnostic_samples()),
         []
     );
 }

@@ -5,7 +5,7 @@ members = ["crates/*/*/*"]
 [workspace.package]
 edition = "2021"
 # The newest any crate here needs (os and file-system); a lower claim would
-# be false for CI. diagnostic, presentation and test-dir claim their own,
+# be false for CI. coded-diagnostic, presentation and test-dir claim their own,
 # lower one, which the runtimes built on them hold. A consumer declaring an
 # older one re-checks its claim when it first links this repository.
 rust-version = "1.96"
@@ -30,7 +30,7 @@ os = { path = "crates/adapters/driven/os" }
 file-system = { path = "crates/adapters/driven/file-system" }
 file-lock = { path = "crates/adapters/driven/file-lock" }
 # Localizable errors (pure), and their rendering at the driving edge.
-diagnostic = { path = "crates/core/domain/diagnostic" }
+coded-diagnostic = { path = "crates/core/domain/coded-diagnostic" }
 presentation = { path = "crates/adapters/driving/presentation" }
 # A test's scratch directory, for a crate below the file-system seam.
 test-dir = { path = "crates/adapters/driven/test-dir" }

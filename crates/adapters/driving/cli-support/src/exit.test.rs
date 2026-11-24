@@ -21,16 +21,16 @@ struct Taken;
 
 impl std::fmt::Display for Taken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 
-impl diagnostic::Diagnostic for Taken {
+impl coded_diagnostic::Diagnostic for Taken {
     fn code(&self) -> &str {
         "taken"
     }
 
-    fn args(&self) -> Vec<(&str, diagnostic::Arg)> {
+    fn args(&self) -> Vec<(&str, coded_diagnostic::Arg)> {
         Vec::new()
     }
 }

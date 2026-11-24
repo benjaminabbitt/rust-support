@@ -1,6 +1,6 @@
 //! The errors' English and the catalog.
 
-use diagnostic::Diagnostic;
+use coded_diagnostic::Diagnostic;
 
 presentation::english_for!(&[crate::EN_US.1]);
 
@@ -20,7 +20,7 @@ fn test_a_timeout_names_the_lock_and_how_long_it_waited() {
         timeout.english(),
         "the lock /h/.demo/locks/x.lock is still held after 30ms: another process holds it; try again once it exits"
     );
-    assert_eq!(timeout.code(), diagnostic::code!("timeout"));
+    assert_eq!(timeout.code(), coded_diagnostic::code!("timeout"));
     assert_eq!(arg_names(&timeout), ["path", "waited_ms"]);
 }
 
@@ -46,7 +46,7 @@ fn test_every_error_has_a_catalog_message_with_exactly_its_args() {
         // Display is the key and args, never English (decision 14.37).
         assert_eq!(
             sample.to_string(),
-            diagnostic::Report::of(&*sample).to_string(),
+            coded_diagnostic::Report::of(&*sample).to_string(),
             "{}",
             sample.code()
         );
@@ -84,7 +84,7 @@ fn test_every_code_is_under_the_crates_name_with_its_message() {
     let (name, text) = crate::EN_US;
     assert_eq!(name, env!("CARGO_PKG_NAME"));
     assert_eq!(
-        diagnostic::catalog::check(name, text, &diagnostic_samples()),
+        coded_diagnostic::catalog::check(name, text, &diagnostic_samples()),
         []
     );
 }

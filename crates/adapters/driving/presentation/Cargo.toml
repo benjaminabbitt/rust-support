@@ -8,10 +8,10 @@ rust-version = "1.77"
 license.workspace = true
 publish.workspace = true
 
-# Domain-free: no crate of this workspace but diagnostic, the trait it
+# Domain-free: no crate of this workspace but coded-diagnostic, the trait it
 # renders, which lib.test.rs checks.
 [dependencies]
-diagnostic.workspace = true
+coded-diagnostic.workspace = true
 # Fluent's standard runtime and its language ids: the catalogs' renderer.
 fluent-bundle.workspace = true
 unic-langid.workspace = true
@@ -37,9 +37,9 @@ fluent-syntax.workspace = true
 test-support = []
 
 # The build writes the catalog's source under the crate's name
-# (diagnostic::build): no catalog spells its crate's name.
+# (coded_diagnostic::build): no catalog spells its crate's name.
 [build-dependencies]
-diagnostic = { workspace = true, features = ["build"] }
+coded-diagnostic = { workspace = true, features = ["build"] }
 
 [lints]
 workspace = true

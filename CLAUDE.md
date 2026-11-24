@@ -64,8 +64,8 @@ adapters, root helpers and a little pure core, so far:
 - `core/domain`: pure computation (no I/O, clock or environment; "now"
   arrives as an argument or a factory): `duration-text`, the grammar of a
   span or a date as text (`now` is zero); `exit-code`, the exit-code convention as a type;
-  `diagnostic`, localizable errors (it builds for `wasm32-unknown-unknown`:
-  `just check-wasm-diagnostic`, part of `just lint`). The core's purity rules (`crates/core/clippy.toml`)
+  `coded-diagnostic`, localizable errors (it builds for `wasm32-unknown-unknown`:
+  `just check-wasm-coded-diagnostic`, part of `just lint`). The core's purity rules (`crates/core/clippy.toml`)
   repeat the root's, since clippy reads the nearest `clippy.toml`; `just lint`
   checks the nesting threshold and every OS-rule entry are in it. A further
   core role (`core/ports`, ...) appears only if a crate needs it. A crate takes plain
@@ -98,7 +98,7 @@ unless it is listed with its reason in `scripts/exec-mode-allow.txt`.
 
 ## Errors are localizable: a code, args, and an en-US message
 
-Every error implements `diagnostic::Diagnostic` with an English
+Every error implements `coded_diagnostic::Diagnostic` with an English
 `Display` fallback, a stable code prefixed with the crate's name, an en-US
 message in `locales/en-US/<crate>.ftl` using exactly its args, and a sample in
 the crate's `diagnostic_samples()`; the crate exports its catalog as `EN_US`

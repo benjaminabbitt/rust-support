@@ -5,7 +5,7 @@
 use std::cell::Cell;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use diagnostic::{Arg, Diagnostic};
+use coded_diagnostic::{Arg, Diagnostic};
 
 use crate::{
     age_between, cutoff_at, format_age, format_exact, format_signed, parse, parse_signed,

@@ -4,7 +4,7 @@
 use std::fmt;
 
 use clap::{Arg as ClapArg, ArgAction, Command};
-use diagnostic::{Arg, Diagnostic};
+use coded_diagnostic::{Arg, Diagnostic};
 use presentation::{Catalog, Format};
 
 use super::*;
@@ -15,7 +15,7 @@ struct Note(&'static str, &'static str);
 
 impl fmt::Display for Note {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 
@@ -183,7 +183,7 @@ struct Plain;
 
 impl fmt::Display for Plain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 

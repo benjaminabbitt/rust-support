@@ -2,7 +2,7 @@
 
 use std::io::{self, Write};
 
-use diagnostic::Diagnostic;
+use coded_diagnostic::Diagnostic;
 use presentation::{write_json, Catalog, Envelope, Format};
 use serde::Serialize;
 

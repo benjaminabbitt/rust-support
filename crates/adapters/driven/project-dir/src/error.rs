@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use diagnostic::{code, Arg, Diagnostic};
+use coded_diagnostic::{code, Arg, Diagnostic};
 
 /// This crate's en-US messages, its name first.
 pub const EN_US: (&str, &str) = (
@@ -28,7 +28,7 @@ pub enum ProjectDirError {
 
 impl fmt::Display for ProjectDirError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 
