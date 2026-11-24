@@ -67,14 +67,16 @@ pub const PRIME_128: u128 = 0x0000_0000_0100_0000_0000_0000_0000_013B;
 
 /// FNV-1a of `bytes`, 64 bits.
 pub fn fnv1a_64(bytes: &[u8]) -> u64 {
-    let _ = bytes;
-    todo!("FNV-1a 64")
+    bytes.iter().fold(OFFSET_BASIS_64, |h, b| {
+        (h ^ u64::from(*b)).wrapping_mul(PRIME_64)
+    })
 }
 
 /// FNV-1a of `bytes`, 128 bits.
 pub fn fnv1a_128(bytes: &[u8]) -> u128 {
-    let _ = bytes;
-    todo!("FNV-1a 128")
+    bytes.iter().fold(OFFSET_BASIS_128, |h, b| {
+        (h ^ u128::from(*b)).wrapping_mul(PRIME_128)
+    })
 }
 
 #[cfg(test)]
