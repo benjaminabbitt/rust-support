@@ -81,7 +81,8 @@ fn write(krate: &str, locales: &Path, out: &Path) -> Result<Vec<String>, String>
 
 /// The [`TABLE`] of `locales`, each with its catalog in `OUT_DIR` embedded.
 fn table(locales: &[String]) -> String {
-    let mut table = String::from("// Each locale's catalog (diagnostic::build), sorted.\n&[\n");
+    let mut table =
+        String::from("// Each locale's catalog (coded_diagnostic::build), sorted.\n&[\n");
     for locale in locales {
         let file = format!("/{locale}.ftl");
         table.push_str(&format!(

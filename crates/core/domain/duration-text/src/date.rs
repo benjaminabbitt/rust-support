@@ -2,7 +2,10 @@
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-const SECONDS_PER_DAY: i64 = 86_400;
+use jiff::civil;
+
+/// 1970-01-01T00:00:00, the Unix epoch, as a civil time.
+const EPOCH: civil::DateTime = civil::date(1970, 1, 1).at(0, 0, 0, 0);
 
 /// What a text shaped like a date is: not one, a calendar date, or shaped
 /// like one and not valid.
@@ -25,36 +28,24 @@ pub(crate) fn read(text: &str) -> Dated {
     if (parts[0].len(), parts[1].len(), parts[2].len()) != (4, 2, 2) {
         return Dated::Invalid;
     }
-    let number = |p: &str| p.parse::<i64>().unwrap_or(0);
+    // Four, two and two digits fit i16 and i8: the calendar is jiff's.
+    let number = |p: &str| p.parse::<i16>().unwrap_or(0);
     let (year, month, day) = (number(parts[0]), number(parts[1]), number(parts[2]));
-    if !(1..=days_in_month(year, month)).contains(&day) {
+    let Ok(day) = i8::try_from(day) else {
         return Dated::Invalid;
-    }
-    Dated::At(days_from_civil(year, month, day) * SECONDS_PER_DAY)
-}
-
-/// The days in `month` (1 to 12) of `year`; 0 for any other month.
-fn days_in_month(year: i64, month: i64) -> i64 {
-    let leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
-    match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 if leap => 29,
-        2 => 28,
-        _ => 0,
-    }
-}
-
-/// Days since 1970-01-01 of a proleptic Gregorian date (Howard Hinnant's
-/// `days_from_civil`).
-fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
-    let year = if month <= 2 { year - 1 } else { year };
-    let era = year.div_euclid(400);
-    let year_of_era = year - era * 400;
-    let month_from_march = (month + 9) % 12;
-    let day_of_year = (153 * month_from_march + 2) / 5 + day - 1;
-    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
-    era * 146_097 + day_of_era - 719_468
+    };
+    let Ok(month) = i8::try_from(month) else {
+        return Dated::Invalid;
+    };
+    // Civil arithmetic, not a UTC `Timestamp`, whose range ends a day short
+    // of 9999-12-31.
+    civil::Date::new(year, month, day).map_or(Dated::Invalid, |date| {
+        Dated::At(
+            date.to_datetime(civil::Time::midnight())
+                .duration_since(EPOCH)
+                .as_secs(),
+        )
+    })
 }
 
 /// The instant `seconds` from the epoch (before it, when negative).

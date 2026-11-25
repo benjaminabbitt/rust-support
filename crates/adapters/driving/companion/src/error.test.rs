@@ -88,7 +88,7 @@ fn test_display_is_the_code_and_args_never_english() {
     for sample in diagnostic_samples() {
         assert_eq!(
             sample.to_string(),
-            diagnostic::Report::of(&*sample).to_string(),
+            coded_diagnostic::Report::of(&*sample).to_string(),
             "{}",
             sample.code()
         );

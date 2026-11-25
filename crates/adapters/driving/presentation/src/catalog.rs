@@ -3,7 +3,7 @@
 
 use std::fmt::Display;
 
-use diagnostic::{Arg, Diagnostic};
+use coded_diagnostic::{Arg, Diagnostic};
 use fluent_bundle::concurrent::FluentBundle;
 use fluent_bundle::{FluentArgs, FluentResource, FluentValue};
 use fluent_langneg::{negotiate_languages, NegotiationStrategy};
@@ -13,13 +13,13 @@ use crate::{locale, CatalogError, Envelope, Unrendered, EN_US, LOCALES};
 
 /// A crate's catalog: its name and its text, embedded (its
 /// `locales/<locale>/messages.ftl` under its name:
-/// `diagnostic::build`). Each crate with diagnostics exports its
+/// `coded_diagnostic::build`). Each crate with diagnostics exports its
 /// en-US one as `EN_US`.
 pub type Source = (&'static str, &'static str);
 
 /// A crate's catalogs in every locale it has: its name, then each locale's
 /// name and catalog text. Each crate with diagnostics exports them as
-/// `LOCALES`, from the table its build writes (`diagnostic::build`),
+/// `LOCALES`, from the table its build writes (`coded_diagnostic::build`),
 /// so a locale added under its `locales` is offered with no other edit.
 pub type Locales = (&'static str, &'static [(&'static str, &'static str)]);
 
@@ -174,7 +174,7 @@ fn offered<'s>(
 }
 
 /// `d` as its key and args (as
-/// diagnostic's `display` writes it): its code, then
+/// coded-diagnostic's `display` writes it): its code, then
 /// ` name=value` for each arg in order, a text value quoted where it would
 /// not parse back, a nested cause as its code under the arg's name and each
 /// of its own args under `<name>.`.
@@ -189,7 +189,7 @@ fn write_args(out: &mut String, d: &dyn Diagnostic, prefix: &str) {
         let value = match arg {
             Arg::Int(n) => n.to_string(),
             Arg::Uint(n) => n.to_string(),
-            Arg::Str(s) => diagnostic::quote(&s).into_owned(),
+            Arg::Str(s) => coded_diagnostic::quote(&s).into_owned(),
             Arg::Nested(cause) => {
                 out.push_str(&format!(" {prefix}{name}={}", cause.code()));
                 write_args(out, &*cause, &format!("{prefix}{name}."));

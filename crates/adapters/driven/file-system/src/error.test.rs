@@ -1,6 +1,6 @@
 //! The error's English and the catalog.
 
-use diagnostic::{Arg, Diagnostic};
+use coded_diagnostic::{Arg, Diagnostic};
 
 presentation::english_for!(&[crate::EN_US.1]);
 
@@ -22,7 +22,7 @@ fn test_a_cwd_error_says_why_the_working_directory_cannot_be_read() {
         error.english(),
         "the working directory cannot be read: gone"
     );
-    assert_eq!(error.code(), diagnostic::code!("no-cwd"));
+    assert_eq!(error.code(), coded_diagnostic::code!("no-cwd"));
     assert!(
         matches!(&error.args()[..], [("reason", Arg::Str(r))] if r == "gone"),
         "{error:?}"
@@ -38,7 +38,7 @@ fn test_a_target_that_exists_names_it_and_says_it_is_left() {
         error.english(),
         "/work/to already exists, and is left as it is"
     );
-    assert_eq!(error.code(), diagnostic::code!("target-exists"));
+    assert_eq!(error.code(), coded_diagnostic::code!("target-exists"));
     assert!(
         matches!(&error.args()[..], [("path", Arg::Str(p))] if p == "/work/to"),
         "{error:?}"
@@ -88,7 +88,7 @@ fn test_every_error_has_a_catalog_message_with_exactly_its_args() {
         // Display is the key and args, never English (decision 14.37).
         assert_eq!(
             sample.to_string(),
-            diagnostic::Report::of(&*sample).to_string(),
+            coded_diagnostic::Report::of(&*sample).to_string(),
             "{}",
             sample.code()
         );
@@ -126,7 +126,7 @@ fn test_every_code_is_under_the_crates_name_with_its_message() {
     let (name, text) = crate::EN_US;
     assert_eq!(name, env!("CARGO_PKG_NAME"));
     assert_eq!(
-        diagnostic::catalog::check(name, text, &diagnostic_samples()),
+        coded_diagnostic::catalog::check(name, text, &diagnostic_samples()),
         []
     );
 }

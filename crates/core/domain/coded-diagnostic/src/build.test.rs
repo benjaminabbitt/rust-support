@@ -54,7 +54,7 @@ fn the_locales_table_embeds_every_locales_catalog_sorted() {
     write("my-crate", &locales, &out).unwrap();
     assert_eq!(
         fs::read_to_string(out.join(TABLE)).unwrap(),
-        r#"// Each locale's catalog (diagnostic::build), sorted.
+        r#"// Each locale's catalog (coded_diagnostic::build), sorted.
 &[
     ("de-DE", include_str!(concat!(env!("OUT_DIR"), "/de-DE.ftl"))),
     ("en-US", include_str!(concat!(env!("OUT_DIR"), "/en-US.ftl"))),

@@ -5,11 +5,11 @@
 //! key and args, as an edge shows it. `english_for!(&[...catalogs])` gives
 //! every diagnostic an `english()` method over those catalogs.
 
-use diagnostic::{Arg, Diagnostic};
+use coded_diagnostic::{Arg, Diagnostic};
 
-/// diagnostic, as `english_for!` names it wherever it is invoked.
+/// coded-diagnostic, as `english_for!` names it wherever it is invoked.
 #[doc(hidden)]
-pub use diagnostic;
+pub use coded_diagnostic;
 use fluent_bundle::{FluentArgs, FluentBundle, FluentResource, FluentValue};
 
 /// `d`'s en-US message from `catalogs`.
@@ -54,7 +54,7 @@ macro_rules! english_for {
             fn english(&self) -> String;
         }
 
-        impl<D: $crate::english::diagnostic::Diagnostic + ?Sized> English for D {
+        impl<D: $crate::english::coded_diagnostic::Diagnostic + ?Sized> English for D {
             fn english(&self) -> String {
                 $crate::english::english_in($catalogs, &Wrapped(self))
             }
@@ -64,7 +64,7 @@ macro_rules! english_for {
         #[allow(dead_code)]
         struct Wrapped<'d, D: ?Sized>(&'d D);
 
-        impl<D: $crate::english::diagnostic::Diagnostic + ?Sized> std::fmt::Debug
+        impl<D: $crate::english::coded_diagnostic::Diagnostic + ?Sized> std::fmt::Debug
             for Wrapped<'_, D>
         {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -72,7 +72,7 @@ macro_rules! english_for {
             }
         }
 
-        impl<D: $crate::english::diagnostic::Diagnostic + ?Sized> std::fmt::Display
+        impl<D: $crate::english::coded_diagnostic::Diagnostic + ?Sized> std::fmt::Display
             for Wrapped<'_, D>
         {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -80,13 +80,13 @@ macro_rules! english_for {
             }
         }
 
-        impl<D: $crate::english::diagnostic::Diagnostic + ?Sized>
-            $crate::english::diagnostic::Diagnostic for Wrapped<'_, D>
+        impl<D: $crate::english::coded_diagnostic::Diagnostic + ?Sized>
+            $crate::english::coded_diagnostic::Diagnostic for Wrapped<'_, D>
         {
             fn code(&self) -> &str {
                 self.0.code()
             }
-            fn args(&self) -> Vec<(&str, $crate::english::diagnostic::Arg)> {
+            fn args(&self) -> Vec<(&str, $crate::english::coded_diagnostic::Arg)> {
                 self.0.args()
             }
         }

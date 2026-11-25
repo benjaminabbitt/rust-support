@@ -3,7 +3,7 @@
 use std::io::{self, Write};
 
 use clap::ArgMatches;
-use diagnostic::Diagnostic;
+use coded_diagnostic::Diagnostic;
 use presentation::{Catalog, Format};
 
 use crate::{Exit, ExitClass};

@@ -3,7 +3,7 @@
 use std::fmt;
 use std::path::Path;
 
-use diagnostic::{code, Arg, Diagnostic};
+use coded_diagnostic::{code, Arg, Diagnostic};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum LockError {
@@ -32,7 +32,7 @@ impl LockError {
 
 impl fmt::Display for LockError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 
@@ -68,7 +68,7 @@ impl Diagnostic for LockError {
 
 /// This crate's en-US messages, its name first: what an edge's catalog
 /// embeds to render its diagnostics. The text of `locales/en-US/messages.ftl`,
-/// its ids under the crate's package name (`diagnostic::build`).
+/// its ids under the crate's package name (`coded_diagnostic::build`).
 pub const EN_US: (&str, &str) = (
     env!("CARGO_PKG_NAME"),
     include_str!(concat!(env!("OUT_DIR"), "/en-US.ftl")),

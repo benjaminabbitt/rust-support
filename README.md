@@ -23,7 +23,7 @@ arguments.
 | `duration-text` | `crates/core/domain/duration-text` | the grammar of a span (`1h30m`, `1.5d`) or a date as text: parse, cutoff, age and exact comparison, over std's `Duration` and `SystemTime` |
 | `fnv-hash` | `crates/core/domain/fnv-hash` | FNV-1a, 64 and 128 bit: pure, no dependency, its parameters and published vectors documented (the 128-bit rows from an independent model) |
 | `exit-code` | `crates/core/domain/exit-code` | the exit-code convention (`docs/exit-codes.md`) as a type |
-| `diagnostic` | `crates/core/domain/diagnostic` | localizable errors: a stable code and named args on every error, Fluent catalogs keyed by the code, and the build helper that embeds a crate's catalogs under its name |
+| `coded-diagnostic` | `crates/core/domain/coded-diagnostic` | localizable errors: a stable code and named args on every error, Fluent catalogs keyed by the code, and the build helper that embeds a crate's catalogs under its name |
 | `presentation` | `crates/adapters/driving/presentation` | presentation at the driving edge: JSON or UTF-8 text, diagnostics rendered from Fluent catalogs, display-width text |
 | `os` | `crates/adapters/driven/os` | everything that differs between operating systems: each flavor's path and environment logic, and the host's syscalls behind one trait |
 | `file-system` | `crates/adapters/driven/file-system` | the one seam every filesystem operation goes through: the real filesystem, or the same re-rooted under a directory (a test's own) |

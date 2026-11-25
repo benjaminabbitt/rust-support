@@ -1,4 +1,4 @@
-use diagnostic::{Arg, Diagnostic};
+use coded_diagnostic::{Arg, Diagnostic};
 
 use super::{diagnostic_samples, ProjectDirError, EN_US};
 
@@ -9,7 +9,7 @@ fn every_code_is_under_the_crates_name_with_its_message() {
     let (name, text) = EN_US;
     assert_eq!(name, "project-dir");
     assert_eq!(
-        diagnostic::catalog::check(name, text, &diagnostic_samples()),
+        coded_diagnostic::catalog::check(name, text, &diagnostic_samples()),
         []
     );
 }

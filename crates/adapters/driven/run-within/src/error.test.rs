@@ -1,6 +1,6 @@
 use std::io;
 
-use diagnostic::Arg;
+use coded_diagnostic::Arg;
 
 use super::{diagnostic_samples, RunError, EN_US};
 
@@ -9,7 +9,7 @@ fn every_code_is_under_the_crates_name_with_its_message() {
     let (name, text) = EN_US;
     assert_eq!(name, "run-within");
     assert_eq!(
-        diagnostic::catalog::check(name, text, &diagnostic_samples()),
+        coded_diagnostic::catalog::check(name, text, &diagnostic_samples()),
         []
     );
 }

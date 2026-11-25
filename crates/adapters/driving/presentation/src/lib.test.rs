@@ -84,7 +84,7 @@ fn dependencies(manifest: &str) -> Vec<&str> {
     names
 }
 
-// The diagnostics are diagnostic's, whose `Display` is a key and
+// The diagnostics are coded-diagnostic's, whose `Display` is a key and
 // its args, never English. Presentation renders that trait alone, and
 // depends on no other crate of this workspace.
 #[test]
@@ -95,7 +95,7 @@ fn test_it_depends_on_no_crate_of_this_workspace_but_diagnostic() {
         .map(str::trim)
         .filter(|line| line.contains("{ path = \"crates/"))
         .filter_map(|line| line.split([' ', '=']).next())
-        .filter(|name| *name != "diagnostic")
+        .filter(|name| *name != "coded-diagnostic")
         .collect();
     assert!(
         members.contains(&"file-system"),
@@ -103,11 +103,11 @@ fn test_it_depends_on_no_crate_of_this_workspace_but_diagnostic() {
     );
     assert!(members.contains(&"cli-support"), "{members:?}");
     let mine = dependencies(include_str!("../Cargo.toml"));
-    assert!(mine.contains(&"diagnostic"), "{mine:?}");
+    assert!(mine.contains(&"coded-diagnostic"), "{mine:?}");
     let domain: Vec<&&str> = mine.iter().filter(|name| members.contains(name)).collect();
     assert!(
         domain.is_empty(),
         "presentation is reused by every binary, so it is domain-free, and renders \
-         diagnostic's diagnostics alone: {domain:?}"
+         coded-diagnostic's diagnostics alone: {domain:?}"
     );
 }

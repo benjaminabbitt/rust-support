@@ -2,11 +2,11 @@
 
 use std::fmt;
 
-use diagnostic::{code, Arg, Diagnostic};
+use coded_diagnostic::{code, Arg, Diagnostic};
 use exit_code::{Exit, ExitClass};
 use presentation::{Locales, Source};
 
-/// This crate's en-US messages, under its package name (`diagnostic::build`).
+/// This crate's en-US messages, under its package name (`coded_diagnostic::build`).
 pub const EN_US: Source = (
     env!("CARGO_PKG_NAME"),
     include_str!(concat!(env!("OUT_DIR"), "/en-US.ftl")),
@@ -29,7 +29,7 @@ pub enum LoadoutError {
 
 impl fmt::Display for LoadoutError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 

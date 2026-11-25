@@ -15,12 +15,12 @@ with no angzarr in its dependency graph.
 - **Direction.** The dependency direction flips. Only the generic code moves
   into rust-support. angzarr depends on rust-support for it; rust-support
   never depends on angzarr.
-- **Names.** The moved crates drop the `angzarr-` prefix (`diagnostic`,
+- **Names.** The moved crates drop the `angzarr-` prefix (`coded-diagnostic`,
   `presentation`). Their diagnostic codes change with the package name
   (`angzarr-presentation-…` becomes `presentation-…`), and so do consumers'
   JSON output and Fluent catalogs. This is pre-1.0 everywhere, so no
   compatibility is owed.
-- **Licence.** `diagnostic` and `presentation` (AGPL-3.0-only with angzarr's
+- **Licence.** `coded-diagnostic` and `presentation` (AGPL-3.0-only with angzarr's
   runtime exception in angzarr) are relicensed to `Apache-2.0 OR
   BSD-3-Clause` as they move. Nothing AGPL enters rust-support, and
   `deny.toml` stays permissive-only.
@@ -32,7 +32,7 @@ with no angzarr in its dependency graph.
 - **`test-dir` moves too.** angzarr's `angzarr-test-dir` (generic,
   Apache/BSD, a dev-dependency) becomes rust-support's `test-dir`. Its
   keep-on-panic variable becomes `TEST_DIR_KEEP`.
-- **wasm32 gate.** `diagnostic` keeps its `wasm32-unknown-unknown` build
+- **wasm32 gate.** `coded-diagnostic` keeps its `wasm32-unknown-unknown` build
   check, as a rust-support gate, so the leaf stays dependency-free.
 - **Co-development through `[patch]`, not repins.** While the steps are in
   flight, each repo builds against the others' worktrees through a
@@ -69,7 +69,7 @@ crate that names `Diagnostic` (about 22).
 
 Layout here: the moved crates take rust-support's rings, so `arch-lint` holds
 them:
-- `diagnostic`: `core/domain`, since it is pure
+- `coded-diagnostic`: `core/domain`, since it is pure
 - `os`, `file-system` and `file-lock`: `adapters/driven`
 - `presentation`: `adapters/driving`, or a `@presentation` class, as the
   rules already allow
@@ -163,10 +163,10 @@ and the cut happen in one rust-support branch, first.
    suite.
 3. **angzarr: repoint at rust-support** (after 1 and 2).
    - angzarr's crates depend on rust-support (pinned by full commit, step
-     1's) for `diagnostic`, `presentation`, `os`, `file-system`,
+     1's) for `coded-diagnostic`, `presentation`, `os`, `file-system`,
      `file-lock` and (as a dev-dependency) `test-dir`.
    - Delete angzarr's copies. Every caller is renamed with them
-     (`angzarr_diagnostic::` becomes `diagnostic::`, `angzarr_test_dir::`
+     (`angzarr_diagnostic::` becomes `coded_diagnostic::`, `angzarr_test_dir::`
      becomes `test_dir::`, `ANGZARR_KEEP_TEST_DIRS` becomes `TEST_DIR_KEEP`,
      and so on).
    - Add `angzarr-store-sqlite-opener`, from rust-support's

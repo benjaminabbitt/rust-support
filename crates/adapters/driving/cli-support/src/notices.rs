@@ -4,7 +4,7 @@
 use std::fmt;
 use std::io::Write;
 
-use diagnostic::{Arg, Diagnostic};
+use coded_diagnostic::{Arg, Diagnostic};
 use presentation::{write_json, write_json_line, Catalog, Format};
 use serde::Serialize;
 
@@ -30,7 +30,7 @@ impl fmt::Debug for FixOf<'_> {
 
 impl fmt::Display for FixOf<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        diagnostic::display(self, f)
+        coded_diagnostic::display(self, f)
     }
 }
 

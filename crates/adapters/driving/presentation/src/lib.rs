@@ -5,7 +5,7 @@
 //! Fluent catalogs.
 //!
 //! It is domain-free (no crate of its workspace but
-//! `diagnostic`; its tests hold it to that), so any binary reuses
+//! `coded-diagnostic`; its tests hold it to that), so any binary reuses
 //! it. A domain's shapes and views live with that domain's driving adapter
 //! and implement [`Render`].
 //!

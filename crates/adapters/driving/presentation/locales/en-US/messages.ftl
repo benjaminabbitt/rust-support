@@ -1,6 +1,6 @@
 # Messages for presentation's errors. Each id is an error's code
 # without the crate's name, which the build prefixes
-# (diagnostic::build); the variables are its args.
+# (coded_diagnostic::build); the variables are its args.
 
 unknown-format = the format { $value } is not one of text or json
 catalog-invalid = the { $source } message catalog cannot be loaded: { $ext_err_txt }

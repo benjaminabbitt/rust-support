@@ -24,9 +24,9 @@
 //! every reference to one, prefixed ([`catalog::prefixed`]):
 //!
 //! ```ignore
-//! // build.rs, diagnostic a build-dependency with feature "build":
+//! // build.rs, coded-diagnostic a build-dependency with feature "build":
 //! fn main() {
-//!     diagnostic::build::catalogs();
+//!     coded_diagnostic::build::catalogs();
 //! }
 //!
 //! // lib.rs:
@@ -88,7 +88,7 @@ mod prefix;
 /// spells its crate's name.
 ///
 /// ```
-/// use diagnostic::code;
+/// use coded_diagnostic::code;
 ///
 /// const TOO_NEW: &str = code!("too-new");
 /// assert_eq!(TOO_NEW, concat!(env!("CARGO_PKG_NAME"), "-too-new"));
@@ -188,7 +188,7 @@ impl From<char> for Arg {
 /// a quick way for a program to raise one without an error type of its own:
 ///
 /// ```
-/// use diagnostic::{Diagnostic, Report};
+/// use coded_diagnostic::{Diagnostic, Report};
 ///
 /// let e = Report::new("my-app-unknown-unit").arg("unit", "ogre");
 /// assert_eq!(e.code(), "my-app-unknown-unit");

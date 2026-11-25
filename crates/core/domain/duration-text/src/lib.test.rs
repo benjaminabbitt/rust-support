@@ -1,247 +1,177 @@
-//! The grammar, as a table. Each row is an input, what the three parsers it
-//! unifies made of it, and what the grammar makes of it.
-//!
-//! The three: `prune` (a command's `--older-than`, a span or a date), `rs`
-//! (a sweep's and a clean's age bound, `d`, `w` or `h` only) and `tags` (the
-//! duration literals of a tag query). Each is observed, not
-//! remembered: the nanoseconds it gave, or `None` where it refused. A row
-//! whose parsers disagree with the grammar (or with each other, where the
-//! grammar sides with one) has a `why`; a row with none is a row on which
-//! every parser and the grammar agree, so the table is also the list of every
-//! change.
+//! The grammar is jiff's friendly format, plus `now`; these tests pin what the
+//! layer over it decides (trim, `now`, signs, errors as diagnostics, the two
+//! formats) and which forms of a consumer's configuration still parse.
 
 use std::cell::Cell;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use diagnostic::{Arg, Diagnostic};
+use coded_diagnostic::{Arg, Diagnostic};
 
-use crate::{age_between, cutoff_at, parse, Comparison, DurationError, DurationText};
+use crate::{
+    age_between, cutoff_at, format_age, format_exact, format_signed, parse, parse_signed,
+    Comparison, DurationError, DurationText, SignedDuration, MAX_AGE_DAYS,
+};
 
-const NS: i128 = 1_000_000_000;
-
-/// What the grammar makes of an input.
-enum Is {
-    Secs(u64),
-    /// Refused, with the code's suffix.
-    Refused(&'static str),
-}
-use Is::{Refused, Secs};
-
-struct Row {
-    text: &'static str,
-    prune: Option<i128>,
-    rs: Option<i128>,
-    tags: Option<i128>,
-    grammar: Is,
-    /// Why a parser's answer changes, empty when none does.
-    why: &'static str,
+fn secs(n: u64) -> Duration {
+    Duration::from_secs(n)
 }
 
-const fn s(n: i128) -> Option<i128> {
-    Some(n * NS)
-}
-
-const SAME: &str = "";
-
-#[rustfmt::skip]
-const TABLE: &[Row] = &[
-    // The forms every parser reads.
-    Row { text: "30d", prune: s(2_592_000), rs: s(2_592_000), tags: s(2_592_000), grammar: Secs(2_592_000), why: SAME },
-    Row { text: "12w", prune: s(7_257_600), rs: s(7_257_600), tags: s(7_257_600), grammar: Secs(7_257_600), why: SAME },
-    Row { text: "720h", prune: s(2_592_000), rs: s(2_592_000), tags: s(2_592_000), grammar: Secs(2_592_000), why: SAME },
-    Row { text: "7d", prune: s(604_800), rs: s(604_800), tags: s(604_800), grammar: Secs(604_800), why: SAME },
-    Row { text: " 30d", prune: s(2_592_000), rs: s(2_592_000), tags: s(2_592_000), grammar: Secs(2_592_000), why: SAME },
-    Row { text: "1h ", prune: s(3_600), rs: s(3_600), tags: s(3_600), grammar: Secs(3_600), why: SAME },
-    // Zero.
-    Row { text: "0d", prune: None, rs: s(0), tags: s(0), grammar: Secs(0), why: "intended: 0d is valid (owner); prune refused it as not positive, so prune's caller keeps that check if it wants it" },
-    Row { text: "0s", prune: None, rs: None, tags: s(0), grammar: Secs(0), why: "intended: 0 of a unit is valid" },
-    Row { text: "0", prune: None, rs: None, tags: None, grammar: Refused("no-unit"), why: SAME },
-    // The word `now`: no time at all (owner, 2026-11-15), lowercase only, as a unit is.
-    Row { text: "now", prune: None, rs: None, tags: None, grammar: Secs(0), why: "intended: `now` is zero (owner, 2026-11-15: a consumer's drain or stop at once)" },
-    Row { text: " now ", prune: None, rs: None, tags: None, grammar: Secs(0), why: "intended: `now` is zero, whitespace around it ignored" },
-    Row { text: "NOW", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: "Now", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: "now1s", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: "1snow", prune: None, rs: None, tags: None, grammar: Refused("unknown-unit"), why: SAME },
-    // Units: s m h d w.
-    Row { text: "90m", prune: s(5_400), rs: None, tags: s(5_400), grammar: Secs(5_400), why: "intended: rs read only d w h" },
-    Row { text: "45s", prune: s(45), rs: None, tags: s(45), grammar: Secs(45), why: "intended: rs read only d w h" },
-    // Compound chains, longest to shortest, each unit once.
-    Row { text: "1h30m", prune: s(5_400), rs: None, tags: s(5_400), grammar: Secs(5_400), why: "intended: rs read no chain" },
-    Row { text: "2w1d", prune: None, rs: None, tags: s(1_296_000), grammar: Secs(1_296_000), why: "intended: prune read a chain only of h m s" },
-    Row { text: "1w1d1h1m1s", prune: None, rs: None, tags: s(694_861), grammar: Secs(694_861), why: "intended: prune read a chain only of h m s" },
-    Row { text: "1d2w", prune: None, rs: None, tags: None, grammar: Refused("out-of-order"), why: SAME },
-    Row { text: "30m1h", prune: s(5_400), rs: None, tags: None, grammar: Refused("out-of-order"), why: "intended: prune read any order (Go's duration)" },
-    Row { text: "1h1h", prune: s(7_200), rs: None, tags: None, grammar: Refused("repeated-unit"), why: "intended: prune read a repeated unit" },
-    Row { text: "1h30m1h", prune: s(9_000), rs: None, tags: None, grammar: Refused("repeated-unit"), why: "intended: prune read a repeated unit" },
-    Row { text: "1h30", prune: None, rs: None, tags: None, grammar: Refused("no-unit"), why: SAME },
-    // Fractions.
-    Row { text: "1.5h", prune: s(5_400), rs: None, tags: None, grammar: Secs(5_400), why: "intended: fractions permitted (owner); rs and tags refused them" },
-    Row { text: "0.5d", prune: None, rs: None, tags: None, grammar: Secs(43_200), why: "intended: fractions permitted; prune read a fraction of h m s only" },
-    Row { text: "1.5d", prune: None, rs: None, tags: None, grammar: Secs(129_600), why: "intended: fractions permitted; prune read a fraction of h m s only" },
-    Row { text: "1.5w", prune: None, rs: None, tags: None, grammar: Secs(907_200), why: "intended: fractions permitted" },
-    Row { text: "1.5m", prune: s(90), rs: None, tags: None, grammar: Secs(90), why: "intended: fractions permitted" },
-    Row { text: "1.5h30m", prune: s(7_200), rs: None, tags: None, grammar: Secs(7_200), why: "intended: fractions permitted" },
-    Row { text: ".5h", prune: s(1_800), rs: None, tags: None, grammar: Secs(1_800), why: "intended: a leading dot is read (prune and Go read it); rs and tags refused it" },
-    Row { text: "1.h", prune: s(3_600), rs: None, tags: None, grammar: Refused("malformed"), why: "intended: a trailing dot is refused (prune and Go read it)" },
-    Row { text: "1..5h", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: "1.5.5h", prune: None, rs: None, tags: None, grammar: Refused("no-unit"), why: SAME },
-    Row { text: ".", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: ".h", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: "1,5h", prune: None, rs: None, tags: None, grammar: Refused("unknown-unit"), why: SAME },
-    // Rounding of a fraction to whole seconds: nearest, ties up.
-    Row { text: "0.4s", prune: Some(400_000_000), rs: None, tags: None, grammar: Secs(0), why: "intended: results are whole seconds; prune kept the nanoseconds" },
-    Row { text: "0.5s", prune: Some(500_000_000), rs: None, tags: None, grammar: Secs(1), why: "intended: results are whole seconds; prune kept the nanoseconds" },
-    Row { text: "1.5s", prune: Some(1_500_000_000), rs: None, tags: None, grammar: Secs(2), why: "intended: results are whole seconds; prune kept the nanoseconds" },
-    Row { text: "2.5s", prune: Some(2_500_000_000), rs: None, tags: None, grammar: Secs(3), why: "intended: results are whole seconds; prune kept the nanoseconds" },
-    // Bare numbers.
-    Row { text: "30", prune: None, rs: None, tags: None, grammar: Refused("no-unit"), why: SAME },
-    Row { text: "30 ", prune: None, rs: None, tags: None, grammar: Refused("no-unit"), why: SAME },
-    // Whitespace inside.
-    Row { text: "30 d", prune: None, rs: None, tags: None, grammar: Refused("whitespace"), why: SAME },
-    Row { text: "3 0d", prune: None, rs: None, tags: None, grammar: Refused("whitespace"), why: SAME },
-    Row { text: "1 h30m", prune: None, rs: None, tags: None, grammar: Refused("whitespace"), why: SAME },
-    Row { text: "1h\t30m", prune: None, rs: None, tags: None, grammar: Refused("whitespace"), why: SAME },
-    // Signs.
-    Row { text: "-3d", prune: None, rs: None, tags: None, grammar: Refused("negative"), why: SAME },
-    Row { text: "-1.5h", prune: None, rs: None, tags: None, grammar: Refused("negative"), why: SAME },
-    Row { text: "-0d", prune: None, rs: s(0), tags: None, grammar: Refused("negative"), why: "intended: any minus is refused; rs read -0d as zero" },
-    Row { text: "+3d", prune: s(259_200), rs: s(259_200), tags: None, grammar: Refused("malformed"), why: "intended: a plus is not in the grammar (the tags refused it)" },
-    // Not finite.
-    Row { text: "inf", prune: None, rs: None, tags: None, grammar: Refused("non-finite"), why: SAME },
-    Row { text: "Inf", prune: None, rs: None, tags: None, grammar: Refused("non-finite"), why: SAME },
-    Row { text: "infinity", prune: None, rs: None, tags: None, grammar: Refused("non-finite"), why: SAME },
-    Row { text: "NaN", prune: None, rs: None, tags: None, grammar: Refused("non-finite"), why: SAME },
-    Row { text: "infh", prune: None, rs: None, tags: None, grammar: Refused("non-finite"), why: SAME },
-    // Overflow.
-    Row { text: "99999999999999999999999999d", prune: None, rs: None, tags: None, grammar: Refused("overflow"), why: SAME },
-    Row { text: "18446744073709551616s", prune: None, rs: None, tags: None, grammar: Refused("overflow"), why: SAME },
-    Row { text: "1e400h", prune: None, rs: None, tags: None, grammar: Refused("unknown-unit"), why: SAME },
-    Row { text: "9223372036854775807s", prune: None, rs: None, tags: None, grammar: Secs(9_223_372_036_854_775_807), why: "intended: the limit is the result's (u64 seconds), not nanoseconds in an i64" },
-    Row { text: "5000000000000h", prune: None, rs: s(18_000_000_000_000_000), tags: None, grammar: Secs(18_000_000_000_000_000), why: "intended: prune and tags overflowed at nanoseconds" },
-    // Units outside s m h d w.
-    Row { text: "500ms", prune: Some(500_000_000), rs: None, tags: None, grammar: Refused("unknown-unit"), why: "intended: sub-second units are not an age's (prune alone read ns us ms)" },
-    Row { text: "2us", prune: Some(2_000), rs: None, tags: None, grammar: Refused("unknown-unit"), why: "intended: sub-second units are not an age's" },
-    Row { text: "3ns", prune: Some(3), rs: None, tags: None, grammar: Refused("unknown-unit"), why: "intended: sub-second units are not an age's" },
-    Row { text: "1y", prune: None, rs: None, tags: None, grammar: Refused("unknown-unit"), why: SAME },
-    Row { text: "1min", prune: None, rs: None, tags: None, grammar: Refused("unknown-unit"), why: SAME },
-    Row { text: "30D", prune: None, rs: None, tags: None, grammar: Refused("unknown-unit"), why: SAME },
-    Row { text: "1.5H", prune: None, rs: None, tags: None, grammar: Refused("unknown-unit"), why: SAME },
-    Row { text: "1hm", prune: None, rs: None, tags: None, grammar: Refused("unknown-unit"), why: SAME },
-    // No number, empty.
-    Row { text: "h", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: "d", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: "soon", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: "\u{ff11}d", prune: None, rs: None, tags: None, grammar: Refused("malformed"), why: SAME },
-    Row { text: "", prune: None, rs: None, tags: None, grammar: Refused("empty"), why: SAME },
-    Row { text: "  ", prune: None, rs: None, tags: None, grammar: Refused("empty"), why: SAME },
-];
-
-/// The grammar's answer, as the table states it.
-fn answer(text: &str) -> Result<u64, String> {
+fn code(text: &str) -> String {
     parse(text)
-        .map(|d| d.as_secs())
-        .map_err(|e| e.code().trim_start_matches("duration-text-").to_string())
+        .unwrap_err()
+        .code()
+        .trim_start_matches("duration-text-")
+        .to_string()
 }
 
 #[test]
-fn the_grammar_answers_every_row() {
-    for row in TABLE {
-        let expected = match row.grammar {
-            Secs(n) => Ok(n),
-            Refused(code) => Err(code.to_string()),
-        };
-        assert_eq!(answer(row.text), expected, "{:?}", row.text);
-    }
-}
-
-/// A row with no `why` is one nothing changes on, and a row with a `why` is
-/// one something does: the table is the list of every change.
-#[test]
-fn a_row_states_a_change_exactly_when_a_parser_changes() {
-    for row in TABLE {
-        let grammar = match row.grammar {
-            Secs(n) => Some(i128::from(n) * NS),
-            Refused(_) => None,
-        };
-        let changes = [row.prune, row.rs, row.tags]
-            .iter()
-            .any(|old| *old != grammar);
-        assert_eq!(changes, !row.why.is_empty(), "{:?}", row.text);
-    }
-}
-
-#[test]
-fn the_last_whole_day_that_fits_is_read() {
-    assert_eq!(
-        parse("213503982334601d").unwrap().as_secs(),
-        18_446_744_073_709_526_400
-    );
-}
-
-#[test]
-fn a_leading_dot_is_read_and_a_trailing_dot_is_not() {
-    assert_eq!(parse(".5h"), Ok(Duration::from_secs(1_800)));
-    assert_eq!(parse("1.h").unwrap_err().code(), "duration-text-malformed");
-}
-
-#[test]
-fn units_are_fixed_lengths() {
-    for (text, seconds) in [
-        ("1s", 1),
-        ("1m", 60),
-        ("1h", 3_600),
-        ("1d", 86_400),
-        ("1w", 604_800),
+fn a_span_is_a_number_and_a_unit() {
+    for (text, expected) in [
+        ("5m", secs(300)),
+        ("90m", secs(5_400)),
+        ("45s", secs(45)),
+        ("2d", secs(172_800)),
+        ("2days", secs(172_800)),
+        ("1w", secs(604_800)),
+        ("500ms", Duration::from_millis(500)),
+        ("2\u{b5}s", Duration::from_micros(2)),
+        ("3ns", Duration::from_nanos(3)),
+        ("0s", Duration::ZERO),
+        ("0d", Duration::ZERO),
+        ("1 hour", secs(3_600)),
     ] {
-        assert_eq!(parse(text), Ok(Duration::from_secs(seconds)), "{text}");
+        assert_eq!(parse(text), Ok(expected), "{text}");
     }
 }
 
 #[test]
-fn a_fraction_is_rounded_once_over_the_whole_chain() {
-    // 0.0001h is 0.36 s and 0.2s is 0.2 s: each rounds to 0 alone, the
-    // total, 0.56 s, to 1.
-    assert_eq!(parse("0.0001h").unwrap().as_secs(), 0);
-    assert_eq!(parse("0.2s").unwrap().as_secs(), 0);
-    assert_eq!(parse("0.0001h0.2s").unwrap().as_secs(), 1);
-    assert_eq!(parse("0.9999h").unwrap().as_secs(), 3_600);
-    assert_eq!(parse("0.0083m").unwrap().as_secs(), 0);
-    assert_eq!(parse("0.0084m").unwrap().as_secs(), 1);
+fn a_chain_runs_largest_to_smallest_with_or_without_spaces() {
+    assert_eq!(parse("1h30m"), Ok(secs(5_400)));
+    assert_eq!(parse("1h 30m"), Ok(secs(5_400)));
+    assert_eq!(parse("1h, 30m"), Ok(secs(5_400)));
+    assert_eq!(parse("01:30:00"), Ok(secs(5_400)));
+    assert_eq!(parse("2w1d"), Ok(secs(1_296_000)));
+    for text in ["30m1h", "1h1h", "1d2w"] {
+        assert_eq!(code(text), "malformed", "{text}");
+    }
 }
 
 #[test]
-fn digits_past_the_eighteenth_cannot_move_a_rounding() {
-    assert_eq!(parse("0.49999999999999999999s").unwrap().as_secs(), 0);
-    assert_eq!(parse("0.5000000000000000001s").unwrap().as_secs(), 1);
-    assert_eq!(parse("0.000000000000000000001w").unwrap().as_secs(), 0);
+fn a_fraction_is_read_on_the_last_unit_where_jiff_reads_one() {
+    assert_eq!(parse("1.5h"), Ok(secs(5_400)));
+    assert_eq!(parse("0.5h"), Ok(secs(1_800)));
+    assert_eq!(parse("1,5h"), Ok(secs(5_400)));
+    assert_eq!(parse("1.5m"), Ok(secs(90)));
+    assert_eq!(parse("4.2s"), Ok(Duration::from_millis(4_200)));
+    assert_eq!(parse("1.5ms"), Ok(Duration::from_micros(1_500)));
 }
 
 #[test]
-fn the_largest_span_is_u64_seconds() {
-    assert_eq!(
-        parse("18446744073709551615s"),
-        Ok(Duration::from_secs(u64::MAX))
-    );
-    assert_eq!(
-        parse("18446744073709551615.4s"),
-        Ok(Duration::from_secs(u64::MAX))
-    );
-    assert_eq!(
-        parse("18446744073709551615.5s").unwrap_err().code(),
-        "duration-text-overflow"
-    );
-    assert_eq!(
-        parse("213503982334602d").unwrap_err().code(),
-        "duration-text-overflow"
-    );
+fn a_fraction_of_a_day_a_week_or_a_nanosecond_is_refused() {
+    for text in ["1.5d", "0.5d", "1.5w", "1.5ns"] {
+        assert_eq!(code(text), "malformed", "{text}");
+    }
 }
 
 #[test]
-fn a_refusal_names_the_text_and_what_was_wrong() {
+fn a_leading_dot_is_refused_as_jiff_refuses_it() {
+    // Pinned so a change in jiff's grammar is seen: `.5h` was a span of the
+    // grammar this replaced.
+    assert_eq!(code(".5h"), "malformed");
+    assert_eq!(code("1.h"), "malformed");
+}
+
+#[test]
+fn now_is_zero_and_whitespace_around_the_text_is_ignored() {
+    assert_eq!(parse("now"), Ok(Duration::ZERO));
+    assert_eq!(parse(" now "), Ok(Duration::ZERO));
+    assert_eq!(parse(" 1h "), Ok(secs(3_600)));
+    assert_eq!(code("NOW"), "malformed");
+    assert_eq!(code("Now"), "malformed");
+}
+
+#[test]
+fn a_bare_number_is_refused_zero_too() {
+    for text in ["30", "0", "1h30", "1.5", "30 "] {
+        assert_eq!(code(text), "malformed", "{text}");
+    }
+}
+
+#[test]
+fn a_unit_is_lowercase_and_a_word_is_no_span() {
+    for text in [
+        "1H", "1.5H", "1M", "NaN", "inf", "soon", "h", "d", "-", "+", "1hh",
+    ] {
+        assert_eq!(code(text), "malformed", "{text}");
+    }
+}
+
+#[test]
+fn nothing_is_empty() {
+    assert_eq!(parse(""), Err(DurationError::Empty));
+    assert_eq!(parse("  \t"), Err(DurationError::Empty));
+}
+
+#[test]
+fn a_year_or_a_month_has_no_fixed_length() {
+    for text in ["1y", "2mo", "1y 2d"] {
+        assert_eq!(code(text), "calendar-unit", "{text}");
+    }
+    assert_eq!(parse("0y"), Ok(Duration::ZERO));
+}
+
+#[test]
+fn a_sign_makes_a_signed_span_and_parse_refuses_it() {
+    assert_eq!(parse_signed("-3d"), Ok(SignedDuration::from_secs(-259_200)));
+    assert_eq!(parse_signed("+3d"), Ok(SignedDuration::from_secs(259_200)));
+    assert_eq!(
+        parse_signed("-1h30m"),
+        Ok(SignedDuration::from_secs(-5_400))
+    );
+    assert_eq!(
+        parse_signed("1h ago"),
+        Ok(SignedDuration::from_secs(-3_600))
+    );
+    assert_eq!(parse_signed("-0d"), Ok(SignedDuration::ZERO));
+    assert_eq!(parse("+3d"), Ok(secs(259_200)));
+    for text in ["-3d", "-1.5h", "1h ago"] {
+        assert_eq!(code(text), "negative", "{text}");
+    }
+}
+
+#[test]
+fn a_signed_span_is_whole_signed_nanoseconds() {
+    let nanos = |text: &str| parse_signed(text).unwrap().as_nanos();
+    assert_eq!(nanos("1us"), 1_000);
+    assert_eq!(nanos("-2\u{b5}s3ns"), -2_003);
+    assert_eq!(nanos("500ms"), 500_000_000);
+    assert_eq!(nanos("-1h"), -3_600_000_000_000);
+    assert_eq!(nanos("9223372036854775807ns"), i128::from(i64::MAX));
+    assert!(parse_signed("9223372036854775808ns").is_err());
+}
+
+#[test]
+fn the_greek_mu_is_not_the_micro_sign() {
+    assert_eq!(code("2\u{3bc}s"), "malformed");
+}
+
+#[test]
+fn a_span_that_is_too_long_is_malformed_with_jiffs_words() {
+    assert_eq!(code("99999999999999d"), "malformed");
+    assert_eq!(code("18446744073709551615s"), "malformed");
+    assert_eq!(
+        parse("9223372036854775807s"),
+        Ok(secs(9_223_372_036_854_775_807))
+    );
+    assert_eq!(parse("175307617h"), Ok(secs(631_107_421_200)));
+}
+
+#[test]
+fn a_refusal_names_the_text_and_carries_the_third_partys_words() {
     let args = |text: &str| {
-        let e = parse(text).unwrap_err();
-        e.args()
+        parse(text)
+            .unwrap_err()
+            .args()
             .into_iter()
             .map(|(k, v)| match v {
                 Arg::Str(s) => (k.to_string(), s.to_string()),
@@ -249,21 +179,140 @@ fn a_refusal_names_the_text_and_what_was_wrong() {
             })
             .collect::<Vec<_>>()
     };
-    let pair = |k: &str, v: &str| (k.to_string(), v.to_string());
-    assert_eq!(args("1y"), [pair("text", "1y"), pair("unit", "y")]);
-    assert_eq!(args("1h1h"), [pair("text", "1h1h"), pair("unit", "h")]);
-    assert_eq!(
-        args("30m1h"),
-        [pair("text", "30m1h"), pair("unit", "h"), pair("after", "m")]
+    let keys = |text: &str| args(text).into_iter().map(|(k, _)| k).collect::<Vec<_>>();
+    assert_eq!(keys("30"), ["text", "ext_err_txt"]);
+    assert_eq!(keys("-3d"), ["text"]);
+    assert_eq!(keys("1y"), ["text"]);
+    assert_eq!(keys(""), Vec::<String>::new());
+    assert_eq!(args("30")[0], ("text".to_string(), "30".to_string()));
+    assert!(
+        args("30")[1].1.contains("unit designator"),
+        "{:?}",
+        args("30")
     );
-    assert_eq!(args("-3d"), [pair("text", "-3d")]);
-    assert_eq!(args(" "), Vec::<(String, String)>::new());
 }
 
 #[test]
 fn an_error_is_a_diagnostic_whose_display_is_its_code_and_args() {
-    let e: DurationError = parse("1y").unwrap_err();
-    assert_eq!(e.to_string(), "duration-text-unknown-unit text=1y unit=y");
+    let e: DurationError = parse("-3d").unwrap_err();
+    assert_eq!(e.to_string(), "duration-text-negative text=-3d");
+}
+
+#[test]
+fn an_exact_span_is_jiffs_compact_text() {
+    assert_eq!(format_exact(secs(5_400)), "1h 30m");
+    assert_eq!(format_exact(Duration::ZERO), "0s");
+    assert_eq!(format_exact(Duration::from_millis(1_500)), "1s 500ms");
+    assert_eq!(format_signed(SignedDuration::from_secs(-5_400)), "-1h 30m");
+}
+
+/// A seeded xorshift, so the property tests are deterministic and need no
+/// crate of their own.
+struct Seeded(u64);
+
+impl Seeded {
+    fn next(&mut self) -> u64 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 7;
+        self.0 ^= self.0 << 17;
+        self.0
+    }
+
+    /// A duration of at most `i64::MAX` seconds, its magnitude chosen first
+    /// so every range is hit.
+    fn duration(&mut self) -> Duration {
+        let bits = self.next() % 63;
+        let seconds = (self.next() >> 1) >> (62 - bits);
+        let nanos = u32::try_from(self.next() % 1_000_000_000).unwrap();
+        let nanos = if self.next().is_multiple_of(3) {
+            0
+        } else {
+            nanos
+        };
+        Duration::new(seconds, nanos)
+    }
+}
+
+#[test]
+fn an_exact_span_reads_back_to_the_same_duration() {
+    let mut rng = Seeded(0x9E37_79B9_7F4A_7C15);
+    let mut cases = vec![
+        Duration::ZERO,
+        Duration::from_nanos(1),
+        Duration::new(0, 999_999_999),
+        secs(1),
+        secs(59),
+        secs(31_557_600),
+        Duration::new(i64::MAX.unsigned_abs(), 999_999_999),
+    ];
+    cases.extend((0..20_000).map(|_| rng.duration()));
+    for d in cases {
+        let text = format_exact(d);
+        assert_eq!(parse(&text), Ok(d), "{text}");
+    }
+}
+
+#[test]
+fn an_exact_signed_span_reads_back_to_the_same_span() {
+    let mut rng = Seeded(0x2545_F491_4F6C_DD1D);
+    for _ in 0..20_000 {
+        let magnitude = SignedDuration::try_from(rng.duration()).unwrap();
+        let signed = if rng.next().is_multiple_of(2) {
+            magnitude
+        } else {
+            -magnitude
+        };
+        let text = format_signed(signed);
+        assert_eq!(parse_signed(&text), Ok(signed), "{text}");
+    }
+}
+
+#[test]
+fn an_age_is_rounded_down_to_its_largest_whole_unit() {
+    for (age, text) in [
+        (Duration::ZERO, "0s"),
+        (Duration::from_millis(999), "0s"),
+        (secs(12), "12s"),
+        (secs(59), "59s"),
+        (secs(60), "1m"),
+        (secs(3 * 60 + 59), "3m"),
+        (secs(5 * 3_600), "5h"),
+        (secs(23 * 3_600 + 3_599), "23h"),
+        (secs(86_400), "1d"),
+        (secs(47 * 3_600), "1d"),
+        (secs(2 * 86_400), "2d"),
+        (secs(400 * 86_400 + 5), "400d"),
+    ] {
+        assert_eq!(format_age(age), text, "{age:?}");
+    }
+}
+
+#[test]
+fn an_age_beyond_a_jiff_span_of_days_is_capped() {
+    let capped = format!("{MAX_AGE_DAYS}d");
+    assert_eq!(format_age(Duration::from_secs(u64::MAX)), capped);
+    assert_eq!(
+        parse(&capped),
+        Ok(secs(u64::try_from(MAX_AGE_DAYS).unwrap() * 86_400))
+    );
+}
+
+#[test]
+fn an_age_reads_back_to_its_rounded_value() {
+    let mut rng = Seeded(0xD1B5_4A32_D192_ED03);
+    let limit = u64::try_from(MAX_AGE_DAYS).unwrap() * 86_400;
+    for _ in 0..20_000 {
+        let age = Duration::new(rng.duration().as_secs() % limit, 123);
+        let text = format_age(age);
+        let read = parse(&text).unwrap_or_else(|e| panic!("{text}: {e}"));
+        assert!(read <= age, "{text} is more than {age:?}");
+        assert_eq!(format_age(read), text, "{age:?}");
+        // The loss is under one unit of the age's own size: under half.
+        assert!(
+            age.as_secs() == 0 || u128::from(read.as_secs()) * 2 > u128::from(age.as_secs()),
+            "{text} loses more than half of {age:?}"
+        );
+    }
 }
 
 fn at(seconds: u64, nanos: u32) -> SystemTime {
@@ -279,6 +328,7 @@ fn a_span_cutoff_is_that_long_before_now_keeping_its_fraction() {
         ("12w", 7_257_600),
         ("720h", 2_592_000),
         ("1h30m", 5_400),
+        ("1h 30m", 5_400),
         ("0d", 0),
         ("now", 0),
     ] {
@@ -310,11 +360,12 @@ fn a_cutoff_refuses_what_is_neither() {
         ("2026-13-40", "invalid-date"),
         ("2026-02-29", "invalid-date"),
         ("2026-1-1", "invalid-date"),
-        ("2026-01-01T00:00:00Z", "unknown-unit"),
-        ("30", "no-unit"),
+        ("2026-01-01T00:00:00Z", "malformed"),
+        ("30", "malformed"),
         ("-3d", "negative"),
+        ("1y", "calendar-unit"),
         ("", "empty"),
-        ("2026-01-01 x", "whitespace"),
+        ("2026-01-01 x", "malformed"),
         ("soon", "malformed"),
     ] {
         assert_eq!(code(text), format!("duration-text-{expected}"), "{text}");
@@ -322,12 +373,31 @@ fn a_cutoff_refuses_what_is_neither() {
 }
 
 #[test]
-fn a_cutoff_before_the_earliest_instant_overflows() {
+fn a_comparison_is_exact() {
+    use Comparison::{AtLeast, AtMost, LessThan, MoreThan};
+    let span = secs(172_800);
+    let under = Duration::new(172_799, 999_999_999);
+    let on = secs(172_800);
+    let on_and_a_half = Duration::new(172_800, 500_000_000);
+    let over = secs(172_801);
+    for (op, expected) in [
+        (AtLeast, [false, true, true, true]),
+        (MoreThan, [false, false, true, true]),
+        (LessThan, [true, false, false, false]),
+        (AtMost, [true, true, false, false]),
+    ] {
+        let got = [under, on, on_and_a_half, over].map(|age| op.holds(age, span));
+        assert_eq!(got, expected, "{op:?}");
+    }
+}
+
+#[test]
+fn a_cutoff_before_the_earliest_instant_is_out_of_range() {
     let earliest = UNIX_EPOCH - Duration::from_secs(1 << 62);
-    let far = format!("{}s", u64::MAX);
+    let far = format!("{}s", i64::MAX);
     assert_eq!(
         cutoff_at(&far, earliest).unwrap_err().code(),
-        "duration-text-overflow"
+        "duration-text-out-of-range"
     );
     assert!(cutoff_at("1s", NOW()).is_ok());
 }
@@ -339,25 +409,6 @@ fn an_age_is_zero_for_a_since_after_now() {
     assert_eq!(age_between(now, now), Duration::ZERO);
     assert_eq!(age_between(at(100, 501), now), Duration::ZERO);
     assert_eq!(age_between(at(200, 0), now), Duration::ZERO);
-}
-
-#[test]
-fn a_comparison_is_exact_in_whole_seconds() {
-    use Comparison::{AtLeast, AtMost, LessThan, MoreThan};
-    let span = Duration::from_secs(172_800);
-    let on = Duration::from_secs(172_800);
-    let on_and_a_half = Duration::new(172_800, 500_000_000);
-    let under = Duration::new(172_799, 999_999_999);
-    let over = Duration::from_secs(172_801);
-    for (op, expected) in [
-        (AtLeast, [false, true, true, true]),
-        (MoreThan, [false, false, false, true]),
-        (LessThan, [true, false, false, false]),
-        (AtMost, [true, true, true, false]),
-    ] {
-        let got = [under, on, on_and_a_half, over].map(|age| op.holds(age, span));
-        assert_eq!(got, expected, "{op:?}");
-    }
 }
 
 /// A factory that counts its reads.
