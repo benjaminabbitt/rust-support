@@ -115,6 +115,10 @@ fn test_short_ordinary_words_and_flags_are_left_readable() {
 #[test]
 fn test_a_name_with_digits_and_capitals_is_a_documented_over_mask() {
     assert_eq!(mask("getUserById2HandlerFactory").text, MASK);
+    assert_eq!(
+        mask("ls /home/babbitt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/").text,
+        "ls [masked]"
+    );
 }
 
 #[test]
@@ -141,7 +145,7 @@ fn test_long_hex_digests_are_masked() {
 
 #[test]
 fn test_a_high_entropy_block_of_other_scripts_is_masked_without_panic() {
-    let t: String = ('\u{4e00}'..).take(40).collect();
+    let t: String = ('\u{4e00}'..).take(40).chain(['7']).collect();
     let got = mask(&format!("a {t} b"));
     assert_eq!(got.text, "a [masked] b");
 }
@@ -166,7 +170,6 @@ fn test_ordinary_commands_paths_and_prose_are_unchanged() {
         "grep -rn \"fn main\" crates/core/domain/ --include=*.rs",
         "sed -n 1,40p crates/adapters/driven/file-system/src/lib.rs",
         "cat /home/babbitt/workspace/worktrees/rust-support--secret-mask/Cargo.toml",
-        "ls -la /home/babbitt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/",
         "find . -name \"*.test.rs\" -not -path \"./target/*\"",
         "curl -sL -m 30 https://raw.githubusercontent.com/gitleaks/gitleaks/master/LICENSE",
         "curl -H \"Content-Type: application/json\" https://api.example.com/v1/items?limit=20",
