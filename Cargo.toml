@@ -24,6 +24,7 @@ fixture-program = { path = "crates/adapters/driven/fixture-program" }
 duration-text = { path = "crates/core/domain/duration-text" }
 exit-code = { path = "crates/core/domain/exit-code" }
 fnv-hash = { path = "crates/core/domain/fnv-hash" }
+secret-mask = { path = "crates/core/domain/secret-mask" }
 arch-lint = { path = "crates/root/bin/arch-lint" }
 # The platform seams: what differs between operating systems, and the
 # filesystem seam over it; advisory file locks through both.

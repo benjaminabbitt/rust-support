@@ -1,0 +1,14 @@
+[package]
+name = "secret-mask"
+version = "0.1.0"
+description = "Masks secrets in a short text before it is recorded: each whitespace-delimited block whose Shannon entropy marks it as a random token; pure, no dependency"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dev-dependencies]
+mutants.workspace = true
+
+[lints]
+workspace = true
