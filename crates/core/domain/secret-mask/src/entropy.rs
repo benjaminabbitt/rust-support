@@ -35,10 +35,13 @@
 //!    more than 5 bits.
 //!
 //! **Measured** on random 62-symbol tokens (the tests sample 400 per length
-//! with a fixed seed and require these): 6 characters 60 in 100 masked, 8:
-//! 73, 10: 82, 11: 86, and from 12 up never under 90: 12: 91, 16: 97, 24: 97,
-//! 32: 99, 40 and over: 100. URL-safe and standard base64 tokens do as well
-//! from 16. Random hex: 100 at 32 characters and over, bar 40 and 64.
+//! with a fixed seed and require these floors): 6 characters 57 in 100 masked,
+//! 8: 73, 10: 81, 11: 83, and from 12 up never under 90: 12: 92, 13: 96, 14:
+//! 93, 16: 97, 20: 97, 24: 98, 32: 99, 40: 99, 64 and over: 100. URL-safe and
+//! standard base64 tokens do as well from 16 (97 at 16, 100 at 64). Random hex:
+//! every length from 32 but 40 and 64. On a sample of ordinary command lines
+//! (about 120 blocks of 6 or more characters) 2 are masked (camel-case
+//! identifiers); the rules before this tuning masked 11.
 //!
 //! **What this misses:** a low-entropy secret (`hunter2`, `password1`), a
 //! token of 2 classes that rarely changes class (base36 hex-like), a token
