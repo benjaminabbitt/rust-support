@@ -44,6 +44,16 @@ pub const SHORT_MAX_LEN: usize = 24;
 pub const SHORT_RATIO: f64 = 0.8;
 /// Fewest characters the long rule judges.
 pub const LONG_MIN_LEN: usize = 16;
+/// Fewest characters of a block the token rule judges.
+pub const TOKEN_MIN_LEN: usize = 0;
+/// Token rule: entropy over log2 of the length at least this.
+pub const TOKEN_RATIO: f64 = 0.0;
+/// Token rule: lengths over this count as this in the log.
+pub const TOKEN_LOG_CAP: usize = 0;
+/// Token rule: class changes over letter pairs at least this.
+pub const TRANSITION_RATIO: f64 = 0.0;
+/// All-hex lengths never masked.
+pub const HEX_KEPT_LENGTHS: [usize; 2] = [0, 0];
 /// Long rule: bits per character at least this.
 pub const LONG_THRESHOLD: f64 = 4.0;
 /// Fewest characters of an all-hex block.

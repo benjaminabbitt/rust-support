@@ -12,12 +12,16 @@
 mod entropy;
 
 pub use entropy::{
-    shannon, HEX_MIN_LEN, HEX_THRESHOLD, LONG_MIN_LEN, LONG_THRESHOLD, MIN_LEN, SHORT_MAX_LEN,
-    SHORT_RATIO,
+    shannon, HEX_KEPT_LENGTHS, HEX_MIN_LEN, HEX_THRESHOLD, LONG_MIN_LEN, LONG_THRESHOLD, MIN_LEN,
+    SHORT_MAX_LEN, SHORT_RATIO, TOKEN_LOG_CAP, TOKEN_MIN_LEN, TOKEN_RATIO, TRANSITION_RATIO,
 };
 
-/// What replaces a masked block.
-pub const MASK: &str = "[masked]";
+/// What replaces a masked block of `len` characters (stub).
+pub fn marker(_len: usize) -> String {
+    String::new()
+}
+
+const MASK: &str = "[masked]";
 
 /// The result of masking one text.
 #[derive(Debug, Clone, PartialEq, Eq)]

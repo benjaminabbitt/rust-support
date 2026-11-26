@@ -30,12 +30,15 @@ fn test_shannon_counts_characters_not_bytes() {
 #[test]
 fn test_the_constants_are_the_documented_ones() {
     assert_eq!(MIN_LEN, 6);
-    assert_eq!(SHORT_MAX_LEN, 24);
+    assert_eq!(SHORT_MAX_LEN, 11);
     assert!((SHORT_RATIO - 0.8).abs() < 1e-9);
-    assert_eq!(LONG_MIN_LEN, 16);
-    assert!((LONG_THRESHOLD - 4.0).abs() < 1e-9);
+    assert_eq!(TOKEN_MIN_LEN, 12);
+    assert!((TOKEN_RATIO - 0.8).abs() < 1e-9);
+    assert_eq!(TOKEN_LOG_CAP, 32);
+    assert!((TRANSITION_RATIO - 0.4).abs() < 1e-9);
     assert_eq!(HEX_MIN_LEN, 32);
     assert!((HEX_THRESHOLD - 3.0).abs() < 1e-9);
+    assert_eq!(HEX_KEPT_LENGTHS, [40, 64]);
 }
 
 #[test]
@@ -89,13 +92,26 @@ fn test_a_long_random_token_is_random() {
 }
 
 #[test]
-fn test_a_long_block_needs_a_digit_and_a_letter() {
-    assert!(!looks_random(&fake(
-        2,
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
-        48
-    )));
+fn test_a_long_block_needs_two_classes_and_mixed_ones() {
+    assert!(!looks_random(&fake(2, "abcdefghijklmnopqrstuvwxyz", 48)));
     assert!(!looks_random(&fake(3, "0123456789", 48)));
+    assert!(!looks_random(&fake(4, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 48)));
+}
+
+#[test]
+fn test_a_long_block_whose_classes_rarely_change_is_not_random() {
+    // 3 classes, 20 distinct characters, but few class changes.
+    assert!(!looks_random("abcdefghijklmnopqrst0123456789ABCDEF"));
+}
+
+#[test]
+fn test_a_long_block_of_low_entropy_is_not_random() {
+    assert!(!looks_random(&"aB3".repeat(12)));
+}
+
+#[test]
+fn test_symbols_are_not_counted_in_the_class_changes() {
+    assert!(!looks_random("claude-opus-4-5-20251101"));
 }
 
 #[test]
@@ -116,6 +132,26 @@ fn test_ordinary_long_blocks_are_not_random() {
 fn test_a_long_hex_digest_is_random() {
     assert!(looks_random("9e107d9d372bb6826bd81d3542a419d6"));
     assert!(looks_random("9E107D9D372BB6826BD81D3542A419D6"));
+}
+
+#[test]
+fn test_git_and_sha256_ids_are_not_random() {
+    assert!(!looks_random(&fake(5, "0123456789abcdef", 40)));
+    assert!(!looks_random(&fake(6, "0123456789ABCDEF", 64)));
+}
+
+#[test]
+fn test_hex_of_the_lengths_beside_40_and_64_is_random() {
+    for n in [32, 39, 41, 48, 63, 65, 96] {
+        assert!(looks_random(&fake(7, "0123456789abcdef", n)), "{n}");
+    }
+}
+
+#[test]
+fn test_short_hex_ids_are_not_random() {
+    for n in [12, 16, 24, 31] {
+        assert!(!looks_random(&fake(8, "0123456789abcdef", n)), "{n}");
+    }
 }
 
 #[test]

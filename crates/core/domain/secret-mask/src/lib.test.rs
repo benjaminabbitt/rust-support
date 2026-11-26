@@ -35,7 +35,7 @@ fn assert_masked(secret: &str, context: &str) {
     let got = mask(&given);
     assert!(got.changed(), "not masked: {given}");
     assert!(!leaks(&got.text, secret), "leaked: {}", got.text);
-    assert!(got.text.contains(MASK));
+    assert!(got.text.contains("[masked:"));
     let again = mask(&got.text);
     assert_eq!(again.text, got.text, "not idempotent");
     assert_eq!(again.count, 0);
@@ -49,7 +49,7 @@ fn test_a_bare_token_is_masked_whole() {
     assert_eq!(
         mask(&t),
         Masked {
-            text: MASK.to_owned(),
+            text: marker(48),
             count: 1
         }
     );
@@ -80,7 +80,7 @@ fn test_tokens_are_masked_in_every_position() {
 fn test_the_value_after_an_equals_sign_is_judged_alone_and_the_sign_kept() {
     let t = fake(3, ALNUM, 56);
     let got = mask(&format!("--token={t} next KEY={t}"));
-    assert_eq!(got.text, "--token=[masked] next KEY=[masked]");
+    assert_eq!(got.text, "--token=[masked:56] next KEY=[masked:56]");
     assert_eq!(got.count, 2);
 }
 
@@ -114,11 +114,7 @@ fn test_short_ordinary_words_and_flags_are_left_readable() {
 
 #[test]
 fn test_a_name_with_digits_and_capitals_is_a_documented_over_mask() {
-    assert_eq!(mask("getUserById2HandlerFactory").text, MASK);
-    assert_eq!(
-        mask("ls /home/babbitt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/").text,
-        "ls [masked]"
-    );
+    assert_eq!(mask("getUserById2HandlerFactory").text, marker(26));
 }
 
 #[test]
@@ -126,7 +122,7 @@ fn test_each_block_is_judged_on_its_own() {
     let a = fake(4, ALNUM, 52);
     let b = fake(5, URLSAFE, 60);
     let got = mask(&format!("one {a} two {b} three"));
-    assert_eq!(got.text, "one [masked] two [masked] three");
+    assert_eq!(got.text, "one [masked:52] two [masked:60] three");
     assert_eq!(got.count, 2);
 }
 
@@ -137,17 +133,35 @@ fn test_url_safe_and_standard_base64_are_masked() {
 }
 
 #[test]
-fn test_long_hex_digests_are_masked() {
-    for (seed, n) in [(8, 32), (9, 40), (10, 64)] {
+fn test_hex_keys_of_other_lengths_are_masked() {
+    for (seed, n) in [(8, 32), (9, 33), (10, 48), (11, 63), (12, 128)] {
         assert_masked(&fake(seed, HEX, n), "digest SECRET end");
     }
 }
 
 #[test]
-fn test_a_high_entropy_block_of_other_scripts_is_masked_without_panic() {
+fn test_git_and_sha256_ids_are_left_readable() {
+    for (seed, n) in [(20, 40), (21, 64)] {
+        let id = fake(seed, HEX, n);
+        let id_upper = id.to_uppercase();
+        for given in [id.clone(), id_upper, format!("git show {id} --stat")] {
+            assert_eq!(
+                mask(&given),
+                Masked {
+                    text: given.clone(),
+                    count: 0
+                },
+                "{given}"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_a_block_of_a_script_without_case_is_not_judged_and_does_not_panic() {
     let t: String = ('\u{4e00}'..).take(40).chain(['7']).collect();
-    let got = mask(&format!("a {t} b"));
-    assert_eq!(got.text, "a [masked] b");
+    // Scripts without case are not judged: the text is kept, nothing panics.
+    assert_eq!(mask(&format!("a {t} b")).count, 0);
 }
 
 // ---- left readable
@@ -232,7 +246,7 @@ fn test_whitespace_is_kept_exactly() {
     let a = fake(11, ALNUM, 50);
     let b = fake(12, ALNUM, 50);
     let given = format!("  lead\t\t{a}\r\n\n  mid  {b}\u{a0}tail \n");
-    let want = "  lead\t\t[masked]\r\n\n  mid  [masked]\u{a0}tail \n";
+    let want = "  lead\t\t[masked:50]\r\n\n  mid  [masked:50]\u{a0}tail \n";
     assert_eq!(mask(&given).text, want);
 }
 
@@ -242,12 +256,26 @@ fn test_only_whitespace_is_unchanged() {
 }
 
 #[test]
-fn test_the_mask_is_not_itself_masked() {
-    assert_eq!(mask(MASK).count, 0);
-    assert_eq!(
-        mask(&format!("{MASK} {MASK}")).text,
-        format!("{MASK} {MASK}")
-    );
+fn test_the_marker_names_the_length_in_characters() {
+    assert_eq!(marker(0), "[masked:0]");
+    assert_eq!(marker(48), "[masked:48]");
+    assert_eq!(mask(&fake(30, ALNUM, 17)).text, marker(17));
+}
+
+#[test]
+fn test_a_marker_is_never_masked_again() {
+    for n in [0usize, 5, 12, 48, 123_456_789, usize::MAX] {
+        let m = marker(n);
+        assert_eq!(mask(&m).count, 0, "{m}");
+        assert_eq!(mask(&format!("a {m} b")).text, format!("a {m} b"));
+        assert_eq!(mask(&format!("KEY={m}")).text, format!("KEY={m}"));
+    }
+}
+
+#[test]
+fn test_text_that_only_looks_like_a_marker_is_judged_as_text() {
+    let t = fake(31, ALNUM, 48);
+    assert_eq!(mask(&format!("[masked:{t}]")).text, marker(48 + 9));
 }
 
 #[test]
@@ -265,7 +293,7 @@ fn test_random_tokens_in_prose_are_always_masked_and_never_leak() {
             0 => (ALNUM, 40 + (seed % 40) as usize),
             1 => (URLSAFE, 40 + (seed % 40) as usize),
             2 => (BASE64, 40 + (seed % 40) as usize),
-            _ => (HEX, 40 + (seed % 24) as usize),
+            _ => (HEX, 41 + (seed % 22) as usize),
         };
         let t = fake(seed, alphabet, n);
         assert_masked(&t, "the build said SECRET twice, then stopped.");
@@ -279,5 +307,53 @@ fn test_random_text_never_panics_and_is_idempotent() {
         let given = fake(seed, alphabet, (seed % 90) as usize);
         let once = mask(&given);
         assert_eq!(mask(&once.text).text, once.text);
+    }
+}
+
+// ---- the rate at which random tokens are masked, per length (fixed seeds)
+
+/// The share of 400 random tokens of `n` characters of `alphabet` masked.
+fn rate(alphabet: &str, n: usize) -> f64 {
+    let hit = (0..400u64)
+        .filter(|&s| mask(&fake(1_000 + s * 131 + n as u64, alphabet, n)).changed())
+        .count();
+    hit as f64 / 400.0
+}
+
+#[test]
+fn test_random_62_symbol_tokens_of_every_length_from_12_are_masked_90_percent_or_more() {
+    for n in (12..=64).chain([80, 96, 128, 200]) {
+        let r = rate(ALNUM, n);
+        assert!(r >= 0.90, "length {n}: {r}");
+    }
+}
+
+#[test]
+fn test_url_safe_and_base64_tokens_are_masked_90_percent_or_more_from_16() {
+    for n in (16..=64).step_by(4) {
+        assert!(rate(URLSAFE, n) >= 0.90, "url-safe {n}");
+        assert!(rate(BASE64, n) >= 0.90, "base64 {n}");
+    }
+}
+
+#[test]
+fn test_short_random_tokens_are_masked_less_often_but_often() {
+    assert!(rate(ALNUM, 6) >= 0.50);
+    assert!(rate(ALNUM, 8) >= 0.65);
+    assert!(rate(ALNUM, 10) >= 0.75);
+    assert!(rate(ALNUM, 11) >= 0.80);
+}
+
+#[test]
+fn test_ordinary_words_of_every_length_are_never_masked() {
+    for w in [
+        "internationalization",
+        "troubleshooting-guide",
+        "documentation-generator",
+        "mutation-testing-framework",
+        "deprecated_function_name",
+        "configuration.yaml",
+    ] {
+        assert_eq!(mask(w).count, 0, "{w}");
     }
 }
