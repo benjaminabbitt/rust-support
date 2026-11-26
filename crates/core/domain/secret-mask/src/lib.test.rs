@@ -357,3 +357,31 @@ fn test_ordinary_words_of_every_length_are_never_masked() {
         assert_eq!(mask(w).count, 0, "{w}");
     }
 }
+
+// ---- a token inside a URL or a path
+
+#[test]
+fn test_a_token_in_url_userinfo_is_masked_alone() {
+    let t = fake(40, ALNUM, 56);
+    let got = mask(&format!("git clone https://user:{t}@example.com/repo.git"));
+    assert_eq!(
+        got.text,
+        format!("git clone https://user:{}@example.com/repo.git", marker(56))
+    );
+    assert_eq!(got.count, 1);
+}
+
+#[test]
+fn test_a_token_in_a_path_is_masked_whole_or_alone_never_shown() {
+    assert_masked(&fake(41, ALNUM, 40), "ls /srv/data/SECRET/files");
+}
+
+#[test]
+fn test_a_base64_secret_with_slashes_is_masked_whole() {
+    let t = fake(42, BASE64, 64);
+    assert!(
+        t.contains('/') || t.contains('+'),
+        "the seed must give a symbol"
+    );
+    assert_eq!(mask(&t).text, marker(64));
+}

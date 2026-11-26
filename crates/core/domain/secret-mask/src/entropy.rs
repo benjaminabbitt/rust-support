@@ -1,65 +1,72 @@
 //! The entropy check: whether one block of text looks like a random token.
 //!
 //! **Why not one number.** The Shannon entropy of an `n`-character block is
-//! at most `log2(n)` bits per character (2.58 for 6 characters, 4.32 for 20),
+//! at most `log2(n)` bits per character (2.58 for 6 characters, 3.58 for 12),
 //! so a fixed threshold such as gitleaks' 3.5 (its `generic-api-key` rule, on
 //! values of 10 to 150 characters it has already cut out with a regular
 //! expression) could never fire below 12 characters, and detect-secrets'
 //! defaults (base64 4.5, hex 3.0, on quoted strings) miss most tokens under
 //! 30. A whole whitespace-delimited block is a path, a URL or a flag as often
 //! as a token, and paths and URLs of 40 to 70 characters measure 3.9 to 4.1
-//! bits on their own. So there are three rules, each of which can only
-//! over-mask, never expose:
+//! bits on their own, as much as a random 20-character token. Entropy alone
+//! cannot tell them apart; what does is how often the character class
+//! (lower case, capital, digit) changes: in a random 62-symbol token every
+//! pair of neighbours changes class about 62 times in a hundred, in words,
+//! kebab-case names, paths and ids far less. So there are three rules, each of
+//! which can only over-mask, never expose:
 //!
 //! 1. **hex** (`HEX_*`): every character a hex digit (a digit and a letter
-//!    among them), at least 32 of them, at least 3.0 bits (detect-secrets' hex limit). Random hex tops out at 4
-//!    bits, so 3.0 is the line that keeps 32 random digits (3.0 to 3.8 bits)
-//!    and drops repeated pairs. Git object ids and sha256 digests are masked
-//!    too: they are what a hex API key looks like.
-//! 2. **short** (`MIN_LEN` to `SHORT_MAX_LEN` characters): a lower-case
-//!    letter, a capital and a digit all present, and the entropy at least
-//!    `SHORT_RATIO` of `log2(n)`: nearly every character distinct. Ordinary
-//!    words and flags (`release`, `origin`, `src/lib.rs`, `HEAD~1`,
-//!    `Cargo.toml`) have one or two classes, so they pass. A random
-//!    62-symbol token of 6, 8, 12 or 24 characters is masked about 60, 73, 87
-//!    and 93 times in a hundred.
-//! 3. **long** (`LONG_MIN_LEN` characters and more): a digit and a letter
-//!    present and at least `LONG_THRESHOLD` (4.0) bits: gitleaks' 3.5 is
-//!    taken up to 4.0 because whole blocks, not extracted values, are
-//!    measured. Random 62-symbol tokens measure 4.2 at 24 characters and 4.7
-//!    at 40; kebab-case names, UUIDs, model names and file paths without
-//!    digits stay under it.
+//!    among them), at least 32 of them, at least 3.0 bits (detect-secrets'
+//!    hex limit), EXCEPT a block of exactly 40 or 64 characters
+//!    ([`HEX_KEPT_LENGTHS`]), a git object id or a sha256 digest, which stays
+//!    readable. Any other all-hex block (a 32-character key, a 48-character
+//!    one) is masked, and an all-hex block shorter than 32 is never judged
+//!    (a short commit id, a 16-digit id).
+//! 2. **short** (`MIN_LEN` to `SHORT_MAX_LEN` characters, 6 to 11): a
+//!    lower-case letter, a capital and a digit all present, and the entropy
+//!    at least `SHORT_RATIO` (0.8) of `log2(n)`: nearly every character
+//!    distinct. Ordinary words and flags (`release`, `origin`, `src/lib.rs`,
+//!    `HEAD~1`, `Cargo.toml`) have one or two classes, so they pass.
+//! 3. **token** (`TOKEN_MIN_LEN`, 12 characters and more): at least two of
+//!    the three classes present, the class changes among the letters and
+//!    digits (symbols skipped) at least `TRANSITION_RATIO` (0.4) of the
+//!    neighbouring pairs, and the entropy at least `TOKEN_RATIO` (0.8) of
+//!    `log2(min(n, TOKEN_LOG_CAP))` (32), so a long token is not asked for
+//!    more than 5 bits.
 //!
-//! What this misses: a low-entropy secret (`hunter2`, `password1`), a short
-//! token of only two classes (base36), a token of 16 to 23 characters in the
-//! gap between the rules. What it hides that it should not: a camel-case
-//! identifier with a digit, and a long path that has digits and many distinct
-//! characters. A false positive only hides log text.
+//! **Measured** on random 62-symbol tokens (the tests sample 400 per length
+//! with a fixed seed and require these): 6 characters 60 in 100 masked, 8:
+//! 73, 10: 82, 11: 86, and from 12 up never under 90: 12: 91, 16: 97, 24: 97,
+//! 32: 99, 40 and over: 100. URL-safe and standard base64 tokens do as well
+//! from 16. Random hex: 100 at 32 characters and over, bar 40 and 64.
+//!
+//! **What this misses:** a low-entropy secret (`hunter2`, `password1`), a
+//! token of 2 classes that rarely changes class (base36 hex-like), a token
+//! under 12 characters one time in two or three, a token in a script without
+//! case, and any hex under 32 characters. **What it hides that it should
+//! not:** a camel-case identifier of 12 or more characters. A false positive
+//! only hides log text.
 
 /// Fewest characters a block has to be judged.
 pub const MIN_LEN: usize = 6;
 /// Longest block the short rule judges.
-pub const SHORT_MAX_LEN: usize = 24;
+pub const SHORT_MAX_LEN: usize = 11;
 /// Short rule: entropy over `log2(length)` at least this.
 pub const SHORT_RATIO: f64 = 0.8;
-/// Fewest characters the long rule judges.
-pub const LONG_MIN_LEN: usize = 16;
 /// Fewest characters of a block the token rule judges.
-pub const TOKEN_MIN_LEN: usize = 0;
-/// Token rule: entropy over log2 of the length at least this.
-pub const TOKEN_RATIO: f64 = 0.0;
-/// Token rule: lengths over this count as this in the log.
-pub const TOKEN_LOG_CAP: usize = 0;
-/// Token rule: class changes over letter pairs at least this.
-pub const TRANSITION_RATIO: f64 = 0.0;
-/// All-hex lengths never masked.
-pub const HEX_KEPT_LENGTHS: [usize; 2] = [0, 0];
-/// Long rule: bits per character at least this.
-pub const LONG_THRESHOLD: f64 = 4.0;
+pub const TOKEN_MIN_LEN: usize = 12;
+/// Token rule: entropy over `log2(min(length, TOKEN_LOG_CAP))` at least this.
+pub const TOKEN_RATIO: f64 = 0.8;
+/// Token rule: lengths over this count as this in the logarithm.
+pub const TOKEN_LOG_CAP: usize = 32;
+/// Token rule: class changes over neighbouring letter pairs at least this.
+pub const TRANSITION_RATIO: f64 = 0.4;
 /// Fewest characters of an all-hex block.
 pub const HEX_MIN_LEN: usize = 32;
 /// All-hex rule: bits per character at least this.
 pub const HEX_THRESHOLD: f64 = 3.0;
+/// The all-hex lengths of a git object id and a sha256 digest: kept readable.
+pub const HEX_KEPT_LENGTHS: [usize; 2] = [40, 64];
 
 /// Shannon entropy of `block` in bits per character (0 for an empty block).
 pub fn shannon(block: &str) -> f64 {
@@ -93,16 +100,44 @@ pub(crate) fn looks_random(block: &str) -> bool {
     let bits = shannon(block);
     let digit = block.chars().any(|c| c.is_ascii_digit());
     let letter = block.chars().any(char::is_alphabetic);
-    let hex = block.chars().all(|c| c.is_ascii_hexdigit());
-    if n >= HEX_MIN_LEN && hex && digit && letter && bits >= HEX_THRESHOLD {
-        return true;
+    if block.chars().all(|c| c.is_ascii_hexdigit()) {
+        return n >= HEX_MIN_LEN
+            && !HEX_KEPT_LENGTHS.contains(&n)
+            && digit
+            && letter
+            && bits >= HEX_THRESHOLD;
     }
     let upper = block.chars().any(char::is_uppercase);
     let lower = block.chars().any(char::is_lowercase);
-    if n <= SHORT_MAX_LEN && upper && lower && digit && bits >= SHORT_RATIO * (n as f64).log2() {
-        return true;
+    if n <= SHORT_MAX_LEN {
+        return upper && lower && digit && bits >= SHORT_RATIO * (n as f64).log2();
     }
-    n >= LONG_MIN_LEN && digit && letter && bits >= LONG_THRESHOLD
+    let classes = usize::from(upper) + usize::from(lower) + usize::from(digit);
+    classes >= 2
+        && changes_class_often(block)
+        && bits >= TOKEN_RATIO * (n.min(TOKEN_LOG_CAP) as f64).log2()
+}
+
+/// Whether, among the letters and digits of `block` (symbols skipped), the
+/// class (lower, upper, digit) changes between at least `TRANSITION_RATIO`
+/// of the neighbouring pairs.
+fn changes_class_often(block: &str) -> bool {
+    let classes: Vec<u8> = block
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .map(|c| {
+            if c.is_ascii_digit() {
+                2
+            } else if c.is_uppercase() {
+                1
+            } else {
+                0
+            }
+        })
+        .collect();
+    let pairs = classes.len().saturating_sub(1);
+    let changes = classes.windows(2).filter(|w| w[0] != w[1]).count();
+    pairs > 0 && changes as f64 >= TRANSITION_RATIO * pairs as f64
 }
 
 #[cfg(test)]
