@@ -385,3 +385,23 @@ fn test_a_base64_secret_with_slashes_is_masked_whole() {
     );
     assert_eq!(mask(&t).text, marker(64));
 }
+
+// ---- what is a marker
+
+#[test]
+fn test_a_marker_is_a_bracketed_masked_colon_and_digits() {
+    assert!(is_marker("[masked:5]"));
+    assert!(is_marker(&marker(123)));
+    for not in [
+        "[masked:]",
+        "[masked:5a]",
+        "x[masked:5]",
+        "[masked:5]x",
+        "[masked5]",
+        "masked:5",
+        "[masked:-5]",
+        "",
+    ] {
+        assert!(!is_marker(not), "{not}");
+    }
+}

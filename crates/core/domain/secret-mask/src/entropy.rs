@@ -123,7 +123,8 @@ pub(crate) fn looks_random(block: &str) -> bool {
 
 /// Whether, among the letters and digits of `block` (symbols skipped), the
 /// class (lower, upper, digit) changes between at least `TRANSITION_RATIO`
-/// of the neighbouring pairs.
+/// of the neighbouring pairs (vacuously so with none: the caller has two
+/// classes, so it has pairs).
 fn changes_class_often(block: &str) -> bool {
     let classes: Vec<u8> = block
         .chars()
@@ -140,7 +141,7 @@ fn changes_class_often(block: &str) -> bool {
         .collect();
     let pairs = classes.len().saturating_sub(1);
     let changes = classes.windows(2).filter(|w| w[0] != w[1]).count();
-    pairs > 0 && changes as f64 >= TRANSITION_RATIO * pairs as f64
+    changes as f64 >= TRANSITION_RATIO * pairs as f64
 }
 
 #[cfg(test)]

@@ -61,7 +61,7 @@ fn test_a_short_token_needs_all_three_classes() {
 
 #[test]
 fn test_a_short_repetitive_token_is_not_random() {
-    assert!(!looks_random("aaB3aaaa"));
+    assert!(!looks_random("xxZ3xxxx"));
 }
 
 #[test]
@@ -83,7 +83,7 @@ fn test_short_words_and_flags_are_not_random() {
 #[test]
 fn test_the_ratio_is_against_the_log_of_the_length() {
     // Four distinct characters among eight: 2 bits against log2(8) = 3.
-    assert!(!looks_random("aB3aB3aB"));
+    assert!(!looks_random("xZ3xZ3xZ"));
 }
 
 #[test]
@@ -106,7 +106,7 @@ fn test_a_long_block_whose_classes_rarely_change_is_not_random() {
 
 #[test]
 fn test_a_long_block_of_low_entropy_is_not_random() {
-    assert!(!looks_random(&"aB3".repeat(12)));
+    assert!(!looks_random(&"xZ3".repeat(12)));
 }
 
 #[test]
@@ -166,3 +166,9 @@ fn test_hex_of_low_entropy_is_not_random() {
 }
 
 const ALNUM: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+#[test]
+fn test_a_short_block_of_hex_digits_is_not_judged_as_a_token() {
+    // every character a hex digit, under 32 of them: the hex rule's, never masked.
+    assert!(!looks_random("aB3xY9".replace(['x', 'Y'], "c").as_str()));
+}
