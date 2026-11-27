@@ -1,0 +1,33 @@
+[package]
+name = "migrate"
+version = "0.1.0"
+description = "The suite's migration registry for anything on disk: monotonic integer versions, forward and back steps as fn pointers, detected at the root, migrated in memory; over a format-neutral value tree or a protobuf field tree; pure"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+coded-diagnostic.workspace = true
+prost = { workspace = true, optional = true }
+
+[dev-dependencies]
+mutants.workspace = true
+# The protobuf form's tests, and the crate's own tests of it.
+migrate = { workspace = true, features = ["prost"] }
+prost.workspace = true
+
+[build-dependencies]
+# The build writes the catalog's source under the crate's name
+# (coded_diagnostic::build): no catalog spells its crate's name.
+coded-diagnostic = { workspace = true, features = ["build"] }
+
+[lints]
+workspace = true
+
+[features]
+# The protobuf form: a message's bytes loaded into the prost type of its
+# version.
+prost = ["dep:prost"]
+# `diagnostic_samples`, for other crates' catalog tests.
+test-support = []

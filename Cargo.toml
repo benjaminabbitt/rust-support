@@ -25,6 +25,8 @@ duration-text = { path = "crates/core/domain/duration-text" }
 exit-code = { path = "crates/core/domain/exit-code" }
 fnv-hash = { path = "crates/core/domain/fnv-hash" }
 secret-mask = { path = "crates/core/domain/secret-mask" }
+migrate = { path = "crates/core/domain/migrate" }
+migrate-files = { path = "crates/adapters/driven/migrate-files" }
 arch-lint = { path = "crates/root/bin/arch-lint" }
 # The platform seams: what differs between operating systems, and the
 # filesystem seam over it; advisory file locks through both.
@@ -75,6 +77,9 @@ unicode-width = "0.2.2"
 # it). No time zone database, no serde: `std` alone, the version released at
 # least two weeks before it was taken.
 jiff = { version = "=0.2.42", default-features = false, features = ["std"] }
+
+# The protobuf form of the migration registry: prost's message trait.
+prost = "0.14"
 
 # `#[mutants::skip]`, for a mutant judged equivalent.
 mutants = "0.0.4"

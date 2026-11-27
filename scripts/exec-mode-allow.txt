@@ -6,3 +6,4 @@ crates/adapters/driven/fixture-program/src/lib.test.rs | fs.set_permissions(&pla
 crates/adapters/driven/fixture-program/src/lib.test.rs | Perms::Exact(Mode::from_bits(0o755)) | the control: a written executable held by a child fails with ETXTBSY, which shows the next test forces the race
 crates/adapters/driven/run-within/src/lib.test.rs | file_system::Open::Create(Mode::from_bits(0o755)) | the forced-ETXTBSY test of run_within: the script is written executable on purpose, to be refused
 crates/adapters/driven/file-system/src/lib.test.rs | .set_permissions(&path, Mode::from_bits(0o610)) | the mode is the point: a file with any execute bit reads back executable; never run
+crates/adapters/driven/migrate-files/src/files.test.rs | Mode::from_bits(0o500) | a directory made read-and-enter only, so the backup cannot be created beside the file; the execute bit is the directory search bit, never a program
